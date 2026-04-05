@@ -24,7 +24,7 @@ interface TeamTabProps {
 
 export function TeamTab({ project }: TeamTabProps) {
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-gray-900">Team Members</h2>
@@ -38,7 +38,7 @@ export function TeamTab({ project }: TeamTabProps) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         {project.team.map((member, i) => (
           <Card key={member.id}>
             <CardContent className="py-4">

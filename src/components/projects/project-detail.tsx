@@ -49,13 +49,13 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
       {/* Project summary bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6">
+      <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex flex-wrap items-center gap-3 md:gap-6">
         <Badge className={STATUS_STYLES[project.status]}>{project.status}</Badge>
         <span className="flex items-center gap-1.5 text-sm text-gray-500">
           <TrendingUp size={14} />
           {project.progress}% complete
         </span>
-        <span className="flex items-center gap-1.5 text-sm text-gray-500">
+        <span className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500">
           <Clock size={14} />
           {formatDate(project.startDate)} → {formatDate(project.endDate)}
         </span>
@@ -63,7 +63,7 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
           <Users size={14} />
           {project.team.length} members
         </span>
-        <div className="flex-1 max-w-xs">
+        <div className="hidden sm:block flex-1 max-w-xs">
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-500 rounded-full"
@@ -74,13 +74,13 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex gap-0 overflow-x-auto">
+      <div className="bg-white border-b border-gray-200 px-2 md:px-6">
+        <div className="flex gap-0 overflow-x-auto scrollbar-hide">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              className={`px-3 md:px-4 py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"

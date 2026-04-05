@@ -23,9 +23,9 @@ export function RisksTab({ project }: RisksTabProps) {
   const highCount = project.risks.filter((r) => r.level === "high").length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[
           {
             label: "Total Risks",
@@ -118,7 +118,7 @@ export function RisksTab({ project }: RisksTabProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 text-xs">
+              <div className="grid grid-cols-3 gap-2 md:gap-4 text-xs">
                 <div>
                   <p className="text-gray-400 font-medium mb-1">Probability</p>
                   <p className={`font-semibold capitalize ${PROB_COLORS[risk.probability]}`}>

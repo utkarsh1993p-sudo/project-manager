@@ -41,11 +41,11 @@ export function PlanningTab({ project }: PlanningTabProps) {
   );
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Planning tools */}
       <div>
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Planning Tools</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
           {PLANNING_TOOLS.map((tool) => {
             const Icon = tool.icon;
             return (
@@ -79,7 +79,7 @@ export function PlanningTab({ project }: PlanningTabProps) {
           <CardTitle>Project Snapshot</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div>
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
                 Goals

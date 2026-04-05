@@ -26,7 +26,7 @@ export function IterationsTab({ project }: IterationsTabProps) {
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 md:p-6 space-y-4">
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
         <Lightbulb size={16} className="text-blue-600 shrink-0 mt-0.5" />
         <p className="text-sm text-blue-700">
@@ -53,7 +53,7 @@ export function IterationsTab({ project }: IterationsTabProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
               {/* What's Off */}
               <div className="rounded-lg bg-red-50 border border-red-100 p-3">
                 <div className="flex items-center gap-2 mb-2">

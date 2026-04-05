@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 import {
   LayoutDashboard,
   FolderKanban,
   Users,
   Settings,
   ChevronRight,
+  Menu,
+  X,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -18,63 +21,120 @@ const NAV_ITEMS = [
   { label: "Settings & Integrations", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar() {
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  return (
+    <nav className="flex-1 px-3 py-4 space-y-0.5">
+      {NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        const active =
+          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              active
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            )}
+          >
+            <Icon size={17} />
+            <span>{item.label}</span>
+            {active && <ChevronRight size={14} className="ml-auto" />}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function UserBlock() {
+  return (
+    <div className="px-4 py-4 border-t border-gray-100">
+      <div className="flex items-center gap-3 px-2">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+          UP
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">Utkarsh Pandey</p>
+          <p className="text-xs text-gray-500 truncate">Admin</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Logo() {
+  return (
+    <div className="px-6 py-5 border-b border-gray-100">
+      <div className="flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+          <span className="text-white font-bold text-sm">PM</span>
+        </div>
+        <div>
+          <p className="font-semibold text-gray-900 text-sm leading-tight">ProjectFlow</p>
+          <p className="text-xs text-gray-500">AI-Powered</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Sidebar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <aside className="w-60 shrink-0 border-r border-gray-200 bg-white flex flex-col min-h-screen">
-      {/* Logo */}
-      <div className="px-6 py-5 border-b border-gray-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">PM</span>
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900 text-sm leading-tight">ProjectFlow</p>
-            <p className="text-xs text-gray-500">AI-Powered</p>
-          </div>
-        </div>
-      </div>
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="md:hidden fixed top-4 left-4 z-50 w-9 h-9 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm"
+      >
+        <Menu size={18} className="text-gray-600" />
+      </button>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const active =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                active
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              )}
-            >
-              <Icon size={17} />
-              <span>{item.label}</span>
-              {active && <ChevronRight size={14} className="ml-auto" />}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/30 z-40"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-      {/* User */}
-      <div className="px-4 py-4 border-t border-gray-100">
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold">
-            UP
+      {/* Mobile drawer */}
+      <aside
+        className={cn(
+          "md:hidden fixed top-0 left-0 h-full w-72 bg-white shadow-xl z-50 flex flex-col transition-transform duration-300",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <span className="text-white font-bold text-sm">PM</span>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">ProjectFlow</p>
+              <p className="text-xs text-gray-500">AI-Powered</p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">Utkarsh Pandey</p>
-            <p className="text-xs text-gray-500 truncate">Admin</p>
-          </div>
+          <button onClick={() => setMobileOpen(false)} className="text-gray-400 hover:text-gray-600">
+            <X size={18} />
+          </button>
         </div>
-      </div>
-    </aside>
+        <NavLinks onNavigate={() => setMobileOpen(false)} />
+        <UserBlock />
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-60 shrink-0 border-r border-gray-200 bg-white flex-col min-h-screen">
+        <Logo />
+        <NavLinks />
+        <UserBlock />
+      </aside>
+    </>
   );
 }

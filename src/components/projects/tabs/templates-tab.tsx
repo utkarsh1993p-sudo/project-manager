@@ -41,7 +41,7 @@ interface TemplatesTabProps {
 
 export function TemplatesTab({ project }: TemplatesTabProps) {
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <div className="flex items-start gap-3">
           <Settings size={16} className="text-blue-600 mt-0.5 shrink-0" />

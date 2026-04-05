@@ -43,10 +43,10 @@ export function WorkspaceTab({ project }: WorkspaceTabProps) {
   );
 
   return (
-    <div className="p-6">
-      <div className="flex gap-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
         {/* Doc list */}
-        <div className="w-64 shrink-0 space-y-2">
+        <div className="w-full md:w-64 shrink-0 space-y-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             Project Files
           </p>

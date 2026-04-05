@@ -83,7 +83,7 @@ export function KanbanTab({ project }: KanbanTabProps) {
     project.tasks.filter((t) => t.status === status);
 
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6">
       <div className="flex gap-4 overflow-x-auto pb-4">
         {COLUMNS.map((col) => {
           const tasks = tasksByStatus(col.id);

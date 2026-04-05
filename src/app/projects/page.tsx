@@ -22,9 +22,9 @@ export default async function ProjectsPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header title="Projects" subtitle={`${MOCK_PROJECTS.length} projects`} />
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex gap-2">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+            <div className="flex gap-2 flex-wrap flex-1">
               {["All", "Active", "Planning", "On Hold", "Completed"].map(
                 (filter) => (
                   <button
@@ -40,7 +40,7 @@ export default async function ProjectsPage() {
                 )
               )}
             </div>
-            <Button size="sm">
+            <Button size="sm" className="shrink-0 self-start sm:self-auto">
               <Plus size={16} />
               New Project
             </Button>
@@ -94,7 +94,7 @@ export default async function ProjectsPage() {
                       </div>
 
                       {/* Stats */}
-                      <div className="shrink-0 flex flex-col items-end gap-3">
+                      <div className="hidden sm:flex shrink-0 flex-col items-end gap-3">
                         <div className="text-right">
                           <p className="text-xs text-gray-500">Progress</p>
                           <p className="text-sm font-semibold text-gray-900">

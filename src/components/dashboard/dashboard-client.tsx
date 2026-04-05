@@ -68,9 +68,9 @@ export function DashboardClient({
       <JiraDrawer open={jiraOpen} onClose={() => setJiraOpen(false)} />
       <ConfluenceDrawer open={confluenceOpen} onClose={() => setConfluenceOpen(false)} />
 
-      <main className="flex-1 overflow-y-auto p-6 space-y-8">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 md:space-y-8">
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {[
             { label: "Total Projects", value: projects.length, icon: Target, color: "text-blue-600 bg-blue-50" },
             { label: "Active Projects", value: activeCount, icon: TrendingUp, color: "text-green-600 bg-green-50" },
@@ -95,7 +95,7 @@ export function DashboardClient({
         </div>
 
         {/* Integration tiles */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
           {/* JIRA tile — clickable */}
           <button
             onClick={() => jiraConnected && setJiraOpen(true)}
@@ -192,7 +192,7 @@ export function DashboardClient({
               View all <ArrowRight size={14} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {projects.map((project) => (
               <button
                 key={project.id}
@@ -238,7 +238,7 @@ export function DashboardClient({
             <h2 className="text-base font-semibold text-gray-900">How to Use Claude AI to Run Projects</h2>
             <p className="text-sm text-gray-500 mt-0.5">From context to execution.</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {WORKFLOW_STEPS.map((step) => {
               const Icon = step.icon;
               return (

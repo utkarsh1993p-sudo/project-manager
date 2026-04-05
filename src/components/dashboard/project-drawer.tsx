@@ -47,7 +47,7 @@ export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
       subtitle={project.description}
       width="xl"
     >
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-5 md:space-y-6">
         {/* Status bar */}
         <div className="flex items-center gap-3 flex-wrap">
           <Badge className={STATUS_STYLES[project.status]}>{project.status}</Badge>
@@ -61,7 +61,7 @@ export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "Tasks", value: project.tasks.length, icon: CheckCircle2, color: "text-blue-600 bg-blue-50" },
             { label: "Done", value: doneTasks, icon: CheckCircle2, color: "text-green-600 bg-green-50" },
@@ -96,7 +96,7 @@ export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
           </ul>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {/* Tasks */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">

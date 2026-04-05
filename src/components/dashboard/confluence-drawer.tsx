@@ -114,7 +114,7 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
 
   return (
     <Drawer open={open} onClose={() => { onClose(); setSelected(null); setEditing(false); }} title={title} subtitle={subtitle} width="xl">
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         {selected ? (
           <div>
             <div className="flex items-center justify-between mb-4">
