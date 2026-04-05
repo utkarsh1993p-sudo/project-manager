@@ -11,6 +11,8 @@ import { KanbanTab } from "./tabs/kanban-tab";
 import { IterationsTab } from "./tabs/iterations-tab";
 import { TeamTab } from "./tabs/team-tab";
 import { TemplatesTab } from "./tabs/templates-tab";
+import { JiraPanel } from "@/components/integrations/jira-panel";
+import { ConfluencePanel } from "@/components/integrations/confluence-panel";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { Clock, Users, TrendingUp } from "lucide-react";
@@ -25,6 +27,8 @@ const TABS = [
   { id: "iterations", label: "Iterations" },
   { id: "team", label: "Team" },
   { id: "templates", label: "Templates" },
+  { id: "jira", label: "JIRA" },
+  { id: "confluence", label: "Confluence" },
 ];
 
 const STATUS_STYLES: Record<string, string> = {
@@ -79,9 +83,27 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
                 activeTab === tab.id
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
+              } ${
+                tab.id === "jira"
+                  ? "text-blue-700"
+                  : tab.id === "confluence"
+                  ? "text-blue-500"
+                  : ""
               }`}
             >
-              {tab.label}
+              {tab.id === "jira" && (
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-3 h-3 bg-blue-600 rounded-sm text-white text-[8px] font-bold flex items-center justify-center">J</span>
+                  {tab.label}
+                </span>
+              )}
+              {tab.id === "confluence" && (
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-3 h-3 bg-blue-500 rounded-sm text-white text-[8px] font-bold flex items-center justify-center">C</span>
+                  {tab.label}
+                </span>
+              )}
+              {tab.id !== "jira" && tab.id !== "confluence" && tab.label}
             </button>
           ))}
         </div>
@@ -98,6 +120,16 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
         {activeTab === "iterations" && <IterationsTab project={project} />}
         {activeTab === "team" && <TeamTab project={project} />}
         {activeTab === "templates" && <TemplatesTab project={project} />}
+        {activeTab === "jira" && (
+          <div className="p-6">
+            <JiraPanel projectId={project.id} tasks={project.tasks} />
+          </div>
+        )}
+        {activeTab === "confluence" && (
+          <div className="p-6">
+            <ConfluencePanel docs={project.workspaceDocs} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderKanban },
   { label: "Team", href: "/team", icon: Users },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Settings & Integrations", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
