@@ -70,23 +70,26 @@ export function DashboardClient({
 
       <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 md:space-y-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Total Projects", value: projects.length, icon: Target, color: "text-blue-600 bg-blue-50" },
-            { label: "Active Projects", value: activeCount, icon: TrendingUp, color: "text-green-600 bg-green-50" },
-            { label: "Open Tasks", value: totalTasks, icon: CheckCircle2, color: "text-purple-600 bg-purple-50" },
-            { label: "Open Risks", value: openRisks, icon: AlertTriangle, color: "text-red-600 bg-red-50" },
+            { label: "Total Projects", short: "Projects", value: projects.length, icon: Target, color: "text-blue-600 bg-blue-50" },
+            { label: "Active Projects", short: "Active", value: activeCount, icon: TrendingUp, color: "text-green-600 bg-green-50" },
+            { label: "Open Tasks", short: "Tasks", value: totalTasks, icon: CheckCircle2, color: "text-purple-600 bg-purple-50" },
+            { label: "Open Risks", short: "Risks", value: openRisks, icon: AlertTriangle, color: "text-red-600 bg-red-50" },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
               <Card key={stat.label}>
-                <CardContent className="flex items-center gap-4 py-5">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.color}`}>
-                    <Icon size={20} />
+                <CardContent className="flex items-center gap-2 md:gap-4 p-3 md:py-5 md:px-6">
+                  <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center shrink-0 ${stat.color}`}>
+                    <Icon size={18} />
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    <p className="text-sm text-gray-500">{stat.label}</p>
+                  <div className="min-w-0">
+                    <p className="text-xl md:text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-[10px] md:text-sm text-gray-500 truncate">
+                      <span className="md:hidden">{stat.short}</span>
+                      <span className="hidden md:inline">{stat.label}</span>
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -220,7 +223,7 @@ export function DashboardClient({
                         <div className="h-full bg-blue-500 rounded-full" style={{ width: `${project.progress}%` }} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
                       <span className="flex items-center gap-1"><Users size={12} />{project.team.length} members</span>
                       <span className="flex items-center gap-1"><Clock size={12} />Due {formatDate(project.endDate)}</span>
                       <span className="flex items-center gap-1"><AlertTriangle size={12} />{project.risks.filter((r) => r.status === "open").length} risks</span>

@@ -20,14 +20,14 @@ export function Card({ children, className }: CardProps) {
 
 export function CardHeader({ children, className }: CardProps) {
   return (
-    <div className={cn("px-6 py-4 border-b border-gray-100", className)}>
+    <div className={cn("px-4 py-3 md:px-6 md:py-4 border-b border-gray-100", className)}>
       {children}
     </div>
   );
 }
 
 export function CardContent({ children, className }: CardProps) {
-  return <div className={cn("px-6 py-4", className)}>{children}</div>;
+  return <div className={cn("px-4 py-3 md:px-6 md:py-4", className)}>{children}</div>;
 }
 
 export function CardTitle({ children, className }: CardProps) {

@@ -125,12 +125,12 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
         {activeTab === "team" && <TeamTab project={project} />}
         {activeTab === "templates" && <TemplatesTab project={project} />}
         {activeTab === "jira" && (
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <JiraPanel projectId={project.id} tasks={project.tasks} />
           </div>
         )}
         {activeTab === "confluence" && (
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <ConfluencePanel docs={project.workspaceDocs} />
           </div>
         )}
