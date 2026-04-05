@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getProjects } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import {
   ArrowRight,
@@ -18,6 +19,8 @@ import {
   RefreshCw,
   Settings2,
   Rocket,
+  Sparkles,
+  Link2,
 } from "lucide-react";
 
 const WORKFLOW_STEPS = [
@@ -152,6 +155,14 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default async function DashboardPage() {
   const MOCK_PROJECTS = await getProjects();
+  const supabase = await createClient();
+  const { data: integrations } = await supabase
+    .from("integrations")
+    .select("type, domain, jira_project_key, confluence_space_key");
+
+  const jiraIntegration = integrations?.find((i) => i.type === "jira") ?? null;
+  const confluenceIntegration = integrations?.find((i) => i.type === "confluence") ?? null;
+
   const totalTasks = MOCK_PROJECTS.flatMap((p) => p.tasks).length;
   const openRisks = MOCK_PROJECTS.flatMap((p) =>
     p.risks.filter((r) => r.status === "open")
@@ -215,6 +226,98 @@ export default async function DashboardPage() {
               );
             })}
           </div>
+
+          {/* Integrations + AI strip */}
+          <div className="grid grid-cols-3 gap-4">
+            {/* JIRA */}
+            <Card className={jiraIntegration ? "border-blue-200 bg-blue-50" : ""}>
+              <CardContent className="py-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+                  <span className="text-white font-bold text-sm">J</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">JIRA</p>
+                  {jiraIntegration ? (
+                    <p className="text-xs text-blue-700">
+                      {jiraIntegration.domain} · {jiraIntegration.jira_project_key}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500">Not connected</p>
+                  )}
+                </div>
+                <Badge className={jiraIntegration ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
+                  {jiraIntegration ? "Live" : "Setup"}
+                </Badge>
+              </CardContent>
+            </Card>
+
+            {/* Confluence */}
+            <Card className={confluenceIntegration ? "border-blue-200 bg-blue-50" : ""}>
+              <CardContent className="py-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center shrink-0">
+                  <span className="text-white font-bold text-sm">C</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">Confluence</p>
+                  {confluenceIntegration ? (
+                    <p className="text-xs text-blue-700">
+                      {confluenceIntegration.domain}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500">Not connected</p>
+                  )}
+                </div>
+                <Badge className={confluenceIntegration ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
+                  {confluenceIntegration ? "Live" : "Setup"}
+                </Badge>
+              </CardContent>
+            </Card>
+
+            {/* AI */}
+            <Card className="border-purple-200 bg-gradient-to-br from-blue-50 to-purple-50">
+              <CardContent className="py-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shrink-0">
+                  <Sparkles size={18} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">AI Assistant</p>
+                  <p className="text-xs text-purple-700">GPT-4o · 8 actions</p>
+                </div>
+                <Badge className="bg-green-100 text-green-700">Active</Badge>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Integration quick links */}
+          {(jiraIntegration || confluenceIntegration) && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Link2 size={12} />
+              <span>Integrations active:</span>
+              {jiraIntegration && (
+                <a
+                  href={`https://${jiraIntegration.domain}.atlassian.net/jira/software/projects/${jiraIntegration.jira_project_key}/boards`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  JIRA ({jiraIntegration.jira_project_key})
+                </a>
+              )}
+              {jiraIntegration && confluenceIntegration && <span>·</span>}
+              {confluenceIntegration && (
+                <a
+                  href={`https://${confluenceIntegration.domain}.atlassian.net/wiki`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  Confluence
+                </a>
+              )}
+              <span>·</span>
+              <Link href="/settings" className="text-blue-600 hover:underline">Manage integrations</Link>
+            </div>
+          )}
 
           {/* Projects */}
           <section>

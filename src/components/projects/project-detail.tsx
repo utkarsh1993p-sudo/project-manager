@@ -13,6 +13,7 @@ import { TeamTab } from "./tabs/team-tab";
 import { TemplatesTab } from "./tabs/templates-tab";
 import { JiraPanel } from "@/components/integrations/jira-panel";
 import { ConfluencePanel } from "@/components/integrations/confluence-panel";
+import { AIAssistant } from "@/components/ai/ai-assistant";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { Clock, Users, TrendingUp } from "lucide-react";
@@ -108,6 +109,9 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
           ))}
         </div>
       </div>
+
+      {/* AI Assistant floating button */}
+      <AIAssistant project={project} />
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto bg-gray-50">

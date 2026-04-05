@@ -56,6 +56,27 @@ export function JiraPanel({ projectId, tasks }: JiraPanelProps) {
   const [importing, setImporting] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  async function syncToDatabase() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/jira/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMessage(`Synced ${data.synced} issues (${data.created} new, ${data.updated} updated)`);
+        loadIssues();
+      }
+    } catch {
+      setError("Sync failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function loadIssues() {
     setLoading(true);
     setError(null);
@@ -186,6 +207,9 @@ export function JiraPanel({ projectId, tasks }: JiraPanelProps) {
           )}
           <Button variant="secondary" size="sm" onClick={loadIssues}>
             <RefreshCw size={14} /> Refresh
+          </Button>
+          <Button size="sm" onClick={syncToDatabase}>
+            <Download size={14} /> Sync to DB
           </Button>
         </div>
       </div>
