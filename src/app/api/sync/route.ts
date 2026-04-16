@@ -138,15 +138,21 @@ export async function POST(req: NextRequest) {
             jira_key: issue.key,
           };
 
-          // Check if task already exists across all projects
-          const { data: existing } = await supabase
-            .from("tasks").select("id, project_id").eq("jira_key", issue.key).single();
+          // Find all tasks for this jira_key (may be duplicates from prior sync bugs)
+          const { data: existingTasks } = await supabase
+            .from("tasks").select("id, project_id").eq("jira_key", issue.key);
+
+          const existing = existingTasks?.[0] ?? null;
 
           if (existing) {
             await supabase.from("tasks").update(taskData).eq("id", existing.id);
+            // Delete duplicate rows for the same jira_key
+            if (existingTasks && existingTasks.length > 1) {
+              const dupeIds = existingTasks.slice(1).map((t) => t.id);
+              await supabase.from("tasks").delete().in("id", dupeIds);
+            }
             jiraUpdated++;
           } else if (projects && projects.length > 0) {
-            // Insert into first project (or specified project)
             const targetProjectId = projectId ?? projects[0].id;
             await supabase.from("tasks").insert({ ...taskData, project_id: targetProjectId });
             jiraCreated++;
