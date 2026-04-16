@@ -12,13 +12,14 @@ async function getAtlassianHeaders() {
   if (!data) return null;
 
   const token = Buffer.from(`${data.email}:${data.api_token}`).toString("base64");
+  const domain = data.domain.replace(/\.atlassian\.net\/?$/, "").trim();
   return {
     headers: {
       Authorization: `Basic ${token}`,
       Accept: "application/json",
       "Content-Type": "application/json",
     },
-    domain: data.domain,
+    domain,
     projectKey: data.jira_project_key,
   };
 }
@@ -49,6 +50,15 @@ export async function GET(req: NextRequest) {
 
   const res = await fetch(url, { headers: auth.headers });
   const data = await res.json();
+
+  if (!res.ok) {
+    const message =
+      data?.errorMessages?.[0] ??
+      data?.message ??
+      `Jira returned ${res.status}`;
+    return NextResponse.json({ error: message }, { status: res.status });
+  }
+
   return NextResponse.json(data);
 }
 

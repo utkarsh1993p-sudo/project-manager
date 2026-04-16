@@ -75,6 +75,7 @@ create table if not exists tasks (
   assignee text,
   due_date date,
   tags text[] default '{}',
+  jira_key text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

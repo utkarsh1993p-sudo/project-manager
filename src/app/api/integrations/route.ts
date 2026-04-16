@@ -24,16 +24,21 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (existing) {
+    const updatePayload: Record<string, unknown> = {
+      domain: body.domain,
+      email: body.email,
+      jira_project_key: body.jira_project_key ?? null,
+      confluence_space_key: body.confluence_space_key ?? null,
+      updated_at: new Date().toISOString(),
+    };
+    // Only overwrite the token if the user explicitly provided a new one
+    if (body.api_token) {
+      updatePayload.api_token = body.api_token;
+    }
+
     const { error } = await supabase
       .from("integrations")
-      .update({
-        domain: body.domain,
-        email: body.email,
-        api_token: body.api_token,
-        jira_project_key: body.jira_project_key ?? null,
-        confluence_space_key: body.confluence_space_key ?? null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", existing.id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
