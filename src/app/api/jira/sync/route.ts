@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   // Fetch JIRA issues
   const res = await fetch(
-    `https://${integration.domain}.atlassian.net/rest/api/3/search?jql=project=${integration.jira_project_key} ORDER BY updated DESC&maxResults=100&fields=summary,status,priority,assignee,duedate,labels,description`,
+    `https://${integration.domain}.atlassian.net/rest/api/3/search/jql?jql=project=${integration.jira_project_key} ORDER BY updated DESC&maxResults=100&fields=summary,status,priority,assignee,duedate,labels,description`,
     { headers }
   );
 

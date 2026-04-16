@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     url = `${base}/project/search?maxResults=50`;
   } else if (resource === "issues") {
     const key = projectKey ?? auth.projectKey;
-    url = `${base}/search?jql=project=${key} ORDER BY created DESC&maxResults=50&fields=summary,status,priority,assignee,duedate,labels`;
+    url = `${base}/search/jql?jql=project=${key} ORDER BY created DESC&maxResults=50&fields=summary,status,priority,assignee,duedate,labels`;
   } else if (resource === "statuses") {
     url = `${base}/project/${projectKey ?? auth.projectKey}/statuses`;
   } else {
