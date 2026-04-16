@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, ArrowLeft, Upload, AlertCircle, FileText, ExternalLink, Check } from "lucide-react";
+import {
+  RefreshCw, ArrowLeft, Upload, AlertCircle, FileText,
+  ExternalLink, Check, Plus, X,
+} from "lucide-react";
 
 interface ConfluencePage {
   id: string;
@@ -36,17 +39,28 @@ interface ConfluenceDrawerProps {
   onClose: () => void;
 }
 
+const DEFAULT_NEW_PAGE = { title: "", content: "" };
+
 export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
   const [pages, setPages] = useState<ConfluencePage[]>([]);
   const [confluenceDomain, setConfluenceDomain] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // View existing page
   const [selected, setSelected] = useState<ConfluencePage | null>(null);
   const [pushing, setPushing] = useState(false);
   const [pushResult, setPushResult] = useState<{ action: string; url: string } | null>(null);
   const [pushError, setPushError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
+
+  // Create new page
+  const [creating, setCreating] = useState(false);
+  const [newPage, setNewPage] = useState(DEFAULT_NEW_PAGE);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createResult, setCreateResult] = useState<{ url: string } | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) loadPages();
@@ -73,7 +87,6 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
   }
 
   async function openPage(page: ConfluencePage) {
-    // Fetch full page with body content
     setLoading(true);
     try {
       const res = await fetch(`/api/confluence?resource=pages&pageId=${page.id}`);
@@ -117,12 +130,68 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
     }
   }
 
-  const title = selected ? selected.title : "Confluence Pages";
-  const subtitle = selected ? `v${selected.version?.number} · ${selected.space?.name}` : `${pages.length} pages`;
+  async function createPage() {
+    if (!newPage.title.trim()) {
+      setCreateError("Title is required.");
+      return;
+    }
+    setCreateLoading(true);
+    setCreateError(null);
+    setCreateResult(null);
+    try {
+      const res = await fetch("/api/confluence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newPage.title.trim(), content: newPage.content }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setCreateError(data.error ?? "Failed to create page.");
+      } else {
+        setCreateResult({ url: data.pageUrl ?? "" });
+        setNewPage(DEFAULT_NEW_PAGE);
+        setTimeout(() => {
+          loadPages();
+          setCreating(false);
+          setCreateResult(null);
+        }, 2000);
+      }
+    } catch {
+      setCreateError("Network error. Please try again.");
+    } finally {
+      setCreateLoading(false);
+    }
+  }
+
+  function resetAndClose() {
+    onClose();
+    setSelected(null);
+    setEditing(false);
+    setCreating(false);
+    setNewPage(DEFAULT_NEW_PAGE);
+    setPushResult(null);
+    setPushError(null);
+    setCreateResult(null);
+    setCreateError(null);
+  }
+
+  const drawerTitle = selected
+    ? selected.title
+    : creating
+    ? "Create New Page"
+    : "Confluence Pages";
+
+  const drawerSubtitle = selected
+    ? `v${selected.version?.number} · ${selected.space?.name}`
+    : creating
+    ? "Add a fresh page to your Confluence space"
+    : `${pages.length} pages`;
 
   return (
-    <Drawer open={open} onClose={() => { onClose(); setSelected(null); setEditing(false); }} title={title} subtitle={subtitle} width="xl">
+    <Drawer open={open} onClose={resetAndClose} title={drawerTitle} subtitle={drawerSubtitle} width="xl">
       <div className="p-4 md:p-6">
+
+        {/* ── Existing page detail ── */}
         {selected ? (
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -150,9 +219,7 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
               <FileText size={16} className="text-blue-600 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-blue-900">{selected.title}</p>
-                <p className="text-xs text-blue-600">
-                  {selected.space?.name} · Version {selected.version?.number}
-                </p>
+                <p className="text-xs text-blue-600">{selected.space?.name} · Version {selected.version?.number}</p>
               </div>
               {selected._links?.webui && confluenceDomain && (
                 <a
@@ -175,12 +242,8 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
                   </span>
                 </div>
                 {pushResult.url && (
-                  <a
-                    href={pushResult.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-green-700 font-medium hover:underline shrink-0"
-                  >
+                  <a href={pushResult.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-green-700 font-medium hover:underline shrink-0">
                     Open page <ExternalLink size={13} />
                   </a>
                 )}
@@ -208,13 +271,89 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
               </div>
             )}
           </div>
+
+        ) : creating ? (
+          /* ── Create new page form ── */
+          <div className="space-y-5">
+            <button
+              onClick={() => { setCreating(false); setNewPage(DEFAULT_NEW_PAGE); setCreateError(null); setCreateResult(null); }}
+              className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+            >
+              <ArrowLeft size={14} /> Back to all pages
+            </button>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Page Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Project Overview, Meeting Notes, Sprint Plan..."
+                value={newPage.title}
+                onChange={(e) => setNewPage((p) => ({ ...p, title: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Content{" "}
+                <span className="text-gray-400 font-normal">(Markdown supported)</span>
+              </label>
+              <textarea
+                placeholder={"# My Page\n\nWrite your content here...\n\n## Section\n- Point one\n- Point two"}
+                value={newPage.content}
+                onChange={(e) => setNewPage((p) => ({ ...p, content: e.target.value }))}
+                rows={12}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none leading-relaxed"
+              />
+            </div>
+
+            {createError && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700">
+                <AlertCircle size={15} className="shrink-0" />
+                <span className="text-sm">{createError}</span>
+              </div>
+            )}
+
+            {createResult && (
+              <div className="flex items-center justify-between gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2 text-green-700">
+                  <Check size={15} className="shrink-0" />
+                  <span className="text-sm font-medium">Page created in Confluence!</span>
+                </div>
+                {createResult.url && (
+                  <a href={createResult.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-green-700 font-medium hover:underline shrink-0">
+                    Open page <ExternalLink size={13} />
+                  </a>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <Button onClick={createPage} disabled={createLoading || !newPage.title.trim()}>
+                {createLoading ? "Creating..." : "Create Page"}
+              </Button>
+              <Button variant="secondary" onClick={() => { setCreating(false); setNewPage(DEFAULT_NEW_PAGE); setCreateError(null); }}>
+                <X size={14} /> Cancel
+              </Button>
+            </div>
+          </div>
+
         ) : (
+          /* ── Pages list ── */
           <div>
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-500">{pages.length} pages in your Confluence space</p>
-              <Button variant="secondary" size="sm" onClick={loadPages} disabled={loading}>
-                <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" size="sm" onClick={loadPages} disabled={loading}>
+                  <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+                </Button>
+                <Button size="sm" onClick={() => { setCreating(true); setCreateError(null); setCreateResult(null); }}>
+                  <Plus size={14} /> Create Page
+                </Button>
+              </div>
             </div>
 
             {error && (
@@ -255,7 +394,12 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
               ))}
 
               {!loading && pages.length === 0 && !error && (
-                <p className="text-center text-gray-400 text-sm py-12">No pages found in this space.</p>
+                <div className="text-center py-12">
+                  <p className="text-gray-400 text-sm mb-3">No pages found in this space.</p>
+                  <Button size="sm" onClick={() => setCreating(true)}>
+                    <Plus size={14} /> Create your first page
+                  </Button>
+                </div>
               )}
             </div>
           </div>
