@@ -166,7 +166,7 @@ export function DashboardClient({
               <button onClick={() => setShowSyncResults(false)} className="text-xs text-gray-400 hover:text-gray-600">Dismiss</button>
             </div>
             {Object.entries(syncResults).map(([key, val]) => {
-              const result = val as { ok: boolean; error?: string; synced?: number; created?: number; updated?: number; pushed?: number; pulled?: number; failed?: number };
+              const result = val as { ok: boolean; error?: string; synced?: number; created?: number; updated?: number; pushed?: number; pulled?: number; failed?: number; reconciled?: number };
               const label: Record<string, string> = {
                 jiraToSupabase: "JIRA → Supabase",
                 supabaseToJira: "Supabase → JIRA",
@@ -180,6 +180,7 @@ export function DashboardClient({
                     result.updated != null && `${result.updated} updated`,
                     result.pushed != null && `${result.pushed} pushed`,
                     result.pulled != null && `${result.pulled} pulled`,
+                    result.reconciled != null && result.reconciled > 0 && `${result.reconciled} closed (deleted in JIRA)`,
                     result.failed != null && result.failed > 0 && `${result.failed} failed`,
                   ].filter(Boolean).join(" · ")
                 : result.error;

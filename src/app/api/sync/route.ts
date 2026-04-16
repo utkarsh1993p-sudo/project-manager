@@ -152,7 +152,21 @@ export async function POST(req: NextRequest) {
             jiraCreated++;
           }
         }
-        results.jiraToSupabase = { ok: true, synced: issues.length, created: jiraCreated, updated: jiraUpdated };
+        // Reconcile: mark tasks as "done" if their JIRA issue no longer exists
+        const fetchedKeys = new Set(issues.map((i: { key: string }) => i.key));
+        const reconcileQuery = projectId
+          ? supabase.from("tasks").select("id, jira_key").eq("project_id", projectId).not("jira_key", "is", null)
+          : supabase.from("tasks").select("id, jira_key").not("jira_key", "is", null);
+        const { data: jiraTasks } = await reconcileQuery;
+        let reconciled = 0;
+        for (const task of jiraTasks ?? []) {
+          if (task.jira_key && !fetchedKeys.has(task.jira_key)) {
+            await supabase.from("tasks").update({ status: "done" }).eq("id", task.id);
+            reconciled++;
+          }
+        }
+
+        results.jiraToSupabase = { ok: true, synced: issues.length, created: jiraCreated, updated: jiraUpdated, reconciled };
       } else {
         const err = await jiraRes.json();
         results.jiraToSupabase = { ok: false, error: err.errorMessages?.[0] ?? `JIRA returned ${jiraRes.status}` };
