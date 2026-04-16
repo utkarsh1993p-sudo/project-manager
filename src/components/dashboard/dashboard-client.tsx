@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Project } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,6 +56,7 @@ export function DashboardClient({
   jiraKey,
   confluenceDomain,
 }: DashboardClientProps) {
+  const router = useRouter();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [jiraOpen, setJiraOpen] = useState(false);
   const [confluenceOpen, setConfluenceOpen] = useState(false);
@@ -85,6 +87,7 @@ export function DashboardClient({
       setLastSyncedAt(new Date());
       setSyncResults(data.results ?? null);
       if (!silent) setShowSyncResults(true);
+      router.refresh();
     } finally {
       syncingRef.current = false;
       setSyncing(false);
