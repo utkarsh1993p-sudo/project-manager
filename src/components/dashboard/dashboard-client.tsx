@@ -9,12 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { ProjectDrawer } from "./project-drawer";
 import { JiraDrawer } from "./jira-drawer";
 import { ConfluenceDrawer } from "./confluence-drawer";
+import { AiDrawer } from "./ai-drawer";
 import { formatDate } from "@/lib/utils";
 import {
   Users, AlertTriangle, TrendingUp, Target,
   CheckCircle2, ArrowRight, Sparkles, ChevronRight,
   RefreshCw, CheckCircle, XCircle, Zap,
 } from "lucide-react";
+
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -59,6 +61,7 @@ export function DashboardClient({
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [jiraOpen, setJiraOpen] = useState(false);
   const [confluenceOpen, setConfluenceOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncResults, setSyncResults] = useState<Record<string, { ok: boolean; error?: string }> | null>(null);
@@ -108,6 +111,7 @@ export function DashboardClient({
       <ProjectDrawer project={selectedProject} onClose={() => setSelectedProject(null)} />
       <JiraDrawer open={jiraOpen} onClose={() => setJiraOpen(false)} />
       <ConfluenceDrawer open={confluenceOpen} onClose={() => setConfluenceOpen(false)} />
+      <AiDrawer open={aiOpen} onClose={() => setAiOpen(false)} projects={projects} />
 
       <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 p-4 md:p-8 space-y-8">
 
@@ -219,7 +223,7 @@ export function DashboardClient({
           variants={stagger}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {/* JIRA */}
           <motion.div variants={fadeUp} custom={0}>
@@ -277,20 +281,40 @@ export function DashboardClient({
             </button>
           </motion.div>
 
-          {/* AI */}
+          {/* AI Assistant */}
           <motion.div variants={fadeUp} custom={2}>
-            <div className="rounded-2xl border border-purple-100 bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50 p-5">
+            <button
+              onClick={() => setAiOpen(true)}
+              className="w-full text-left rounded-2xl border border-purple-100 bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50 hover:shadow-md hover:border-purple-200 p-5 transition-all duration-200"
+            >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center shadow-sm">
                   <Sparkles size={16} className="text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-gray-900">AI Assistant</p>
-                  <p className="text-xs text-purple-600">Claude · 8 actions</p>
+                  <p className="text-xs text-purple-500">Claude · 8 actions</p>
                 </div>
                 <Badge className="bg-emerald-100 text-emerald-700 border-0">Active</Badge>
               </div>
-              <p className="text-xs text-purple-500">Open any project → AI button to generate summaries & reports</p>
+              <p className="text-xs text-violet-600 flex items-center gap-1 font-medium">Generate reports <ChevronRight size={12} /></p>
+            </button>
+          </motion.div>
+
+          {/* SharePoint */}
+          <motion.div variants={fadeUp} custom={3}>
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-sm">
+                  <span className="text-white font-bold text-sm">S</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900">SharePoint</p>
+                  <p className="text-xs text-gray-400">Not connected</p>
+                </div>
+                <Badge className="bg-gray-100 text-gray-500 border-0">Setup</Badge>
+              </div>
+              <a href="/settings" className="text-xs text-blue-600 hover:underline">Configure →</a>
             </div>
           </motion.div>
         </motion.div>
