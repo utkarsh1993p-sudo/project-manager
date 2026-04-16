@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: "https://api.groq.com/openai/v1",
-});
+function getClient() {
+  return new OpenAI({
+    apiKey: process.env.GROQ_API_KEY ?? "",
+    baseURL: "https://api.groq.com/openai/v1",
+  });
+}
 
 export async function POST(req: NextRequest) {
   const { action, context } = await req.json();
@@ -39,7 +41,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getClient().chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1000,

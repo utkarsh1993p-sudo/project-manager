@@ -127,7 +127,7 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
           <div>
             <div className="flex items-center justify-between mb-4">
               <button
-                onClick={() => { setSelected(null); setEditing(false); setPushMsg(""); }}
+                onClick={() => { setSelected(null); setEditing(false); setPushResult(null); setPushError(null); }}
                 className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
               >
                 <ArrowLeft size={14} /> Back to all pages
