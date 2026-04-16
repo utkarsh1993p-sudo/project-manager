@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
+});
 
 export async function POST(req: NextRequest) {
   const { action, context } = await req.json();
@@ -35,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "llama-3.3-70b-versatile",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1000,
       temperature: 0.7,
@@ -44,7 +47,7 @@ export async function POST(req: NextRequest) {
     const result = completion.choices[0]?.message?.content ?? "";
     return NextResponse.json({ result });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "OpenAI error";
+    const message = err instanceof Error ? err.message : "AI error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
