@@ -5,7 +5,10 @@ import type { Project, WorkspaceDoc } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { FileText, Map, AlertTriangle, ListChecks } from "lucide-react";
+import {
+  FileText, Map, AlertTriangle, ListChecks,
+  Upload, Copy, Check, ExternalLink, AlertCircle,
+} from "lucide-react";
 
 const DOC_META: Record<
   WorkspaceDoc["type"],
@@ -33,6 +36,11 @@ const DOC_META: Record<
   },
 };
 
+interface PushResult {
+  action: "created" | "updated";
+  url: string;
+}
+
 interface WorkspaceTabProps {
   project: Project;
 }
@@ -41,6 +49,46 @@ export function WorkspaceTab({ project }: WorkspaceTabProps) {
   const [selectedDoc, setSelectedDoc] = useState<WorkspaceDoc | null>(
     project.workspaceDocs[0] ?? null
   );
+  const [pushing, setPushing] = useState(false);
+  const [pushResult, setPushResult] = useState<PushResult | null>(null);
+  const [pushError, setPushError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function pushToConfluence(doc: WorkspaceDoc) {
+    setPushing(true);
+    setPushResult(null);
+    setPushError(null);
+    try {
+      const res = await fetch("/api/confluence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: doc.title, content: doc.content }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setPushError(data.error ?? "Failed to push to Confluence.");
+        return;
+      }
+      setPushResult({ action: data.action, url: data.pageUrl ?? "" });
+    } catch {
+      setPushError("Network error. Is Confluence connected in Settings?");
+    } finally {
+      setPushing(false);
+    }
+  }
+
+  function copyContent(content: string) {
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  // Reset push state when switching docs
+  function selectDoc(doc: WorkspaceDoc) {
+    setSelectedDoc(doc);
+    setPushResult(null);
+    setPushError(null);
+  }
 
   return (
     <div className="p-4 md:p-6">
@@ -57,7 +105,7 @@ export function WorkspaceTab({ project }: WorkspaceTabProps) {
             return (
               <button
                 key={doc.id}
-                onClick={() => setSelectedDoc(doc)}
+                onClick={() => selectDoc(doc)}
                 className={`w-full text-left rounded-xl border p-3 transition-all ${
                   isSelected
                     ? meta.color + " shadow-sm"
@@ -84,24 +132,62 @@ export function WorkspaceTab({ project }: WorkspaceTabProps) {
           <div className="flex-1 min-w-0">
             <Card>
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h3 className="font-semibold text-gray-900">
-                  {selectedDoc.title}
-                </h3>
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm">
-                    Edit
+                <h3 className="font-semibold text-gray-900">{selectedDoc.title}</h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => copyContent(selectedDoc.content)}
+                  >
+                    {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
                   </Button>
-                  <Button variant="secondary" size="sm">
-                    Copy
+                  <Button
+                    size="sm"
+                    disabled={pushing}
+                    onClick={() => pushToConfluence(selectedDoc)}
+                  >
+                    <Upload size={13} />
+                    {pushing ? "Pushing..." : "Push to Confluence"}
                   </Button>
                 </div>
               </div>
-              <CardContent>
-                <div className="prose prose-sm max-w-none">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
-                    {selectedDoc.content}
-                  </pre>
+
+              {/* Push result banner */}
+              {pushResult && (
+                <div className="mx-6 mt-4 flex items-center justify-between gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2 text-green-700">
+                    <Check size={15} className="shrink-0" />
+                    <span className="text-sm font-medium">
+                      {pushResult.action === "created" ? "Page created" : "Page updated"} in Confluence
+                    </span>
+                  </div>
+                  {pushResult.url ? (
+                    <a
+                      href={pushResult.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-sm text-green-700 font-medium hover:underline shrink-0"
+                    >
+                      Open page <ExternalLink size={13} />
+                    </a>
+                  ) : (
+                    <span className="text-xs text-green-600">Check your Confluence space</span>
+                  )}
                 </div>
+              )}
+
+              {/* Push error banner */}
+              {pushError && (
+                <div className="mx-6 mt-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700">
+                  <AlertCircle size={15} className="shrink-0" />
+                  <span className="text-sm">{pushError}</span>
+                </div>
+              )}
+
+              <CardContent className="pt-4">
+                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
+                  {selectedDoc.content}
+                </pre>
               </CardContent>
             </Card>
           </div>

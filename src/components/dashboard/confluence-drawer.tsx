@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, ArrowLeft, Upload, AlertCircle, FileText } from "lucide-react";
+import { RefreshCw, ArrowLeft, Upload, AlertCircle, FileText, ExternalLink, Check } from "lucide-react";
 
 interface ConfluencePage {
   id: string;
@@ -38,11 +38,13 @@ interface ConfluenceDrawerProps {
 
 export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
   const [pages, setPages] = useState<ConfluencePage[]>([]);
+  const [confluenceDomain, setConfluenceDomain] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ConfluencePage | null>(null);
   const [pushing, setPushing] = useState(false);
-  const [pushMsg, setPushMsg] = useState("");
+  const [pushResult, setPushResult] = useState<{ action: string; url: string } | null>(null);
+  const [pushError, setPushError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
 
@@ -62,6 +64,7 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
       }
       const data = await res.json();
       setPages(data.results ?? []);
+      if (data.confluenceDomain) setConfluenceDomain(data.confluenceDomain);
     } catch {
       setError("Could not reach Confluence. Configure in Settings.");
     } finally {
@@ -91,7 +94,8 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
   async function pushEdits() {
     if (!selected) return;
     setPushing(true);
-    setPushMsg("");
+    setPushResult(null);
+    setPushError(null);
     try {
       const res = await fetch("/api/confluence", {
         method: "POST",
@@ -99,11 +103,15 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
         body: JSON.stringify({ title: selected.title, content: editContent }),
       });
       const data = await res.json();
-      setPushMsg(data.action === "updated" ? "Updated in Confluence" : "Created in Confluence");
-      setEditing(false);
-      loadPages();
+      if (!res.ok || data.error) {
+        setPushError(data.error ?? "Push failed.");
+      } else {
+        setPushResult({ action: data.action, url: data.pageUrl ?? "" });
+        setEditing(false);
+        loadPages();
+      }
     } catch {
-      setPushMsg("Push failed");
+      setPushError("Network error. Please try again.");
     } finally {
       setPushing(false);
     }
@@ -125,7 +133,6 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
                 <ArrowLeft size={14} /> Back to all pages
               </button>
               <div className="flex items-center gap-2">
-                {pushMsg && <span className="text-xs text-green-600">{pushMsg}</span>}
                 {editing ? (
                   <>
                     <Button variant="secondary" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
@@ -141,13 +148,51 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
 
             <div className="flex items-center gap-3 mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
               <FileText size={16} className="text-blue-600 shrink-0" />
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-blue-900">{selected.title}</p>
                 <p className="text-xs text-blue-600">
                   {selected.space?.name} · Version {selected.version?.number}
                 </p>
               </div>
+              {selected._links?.webui && confluenceDomain && (
+                <a
+                  href={`https://${confluenceDomain}.atlassian.net${selected._links.webui}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:underline shrink-0"
+                >
+                  Open <ExternalLink size={11} />
+                </a>
+              )}
             </div>
+
+            {pushResult && (
+              <div className="flex items-center justify-between gap-3 mb-4 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2 text-green-700">
+                  <Check size={15} className="shrink-0" />
+                  <span className="text-sm font-medium">
+                    {pushResult.action === "created" ? "Page created" : "Page updated"} in Confluence
+                  </span>
+                </div>
+                {pushResult.url && (
+                  <a
+                    href={pushResult.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-green-700 font-medium hover:underline shrink-0"
+                  >
+                    Open page <ExternalLink size={13} />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {pushError && (
+              <div className="flex items-center gap-2 mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700">
+                <AlertCircle size={15} className="shrink-0" />
+                <span className="text-sm">{pushError}</span>
+              </div>
+            )}
 
             {editing ? (
               <textarea

@@ -47,7 +47,8 @@ export async function GET(req: NextRequest) {
 
   const res = await fetch(url, { headers: auth.headers });
   const data = await res.json();
-  return NextResponse.json(data);
+  // Include domain so clients can construct full page URLs from _links.webui
+  return NextResponse.json({ ...data, confluenceDomain: auth.domain });
 }
 
 // POST /api/confluence — create or update a page
@@ -86,7 +87,9 @@ export async function POST(req: NextRequest) {
       }),
     });
     const data = await res.json();
-    return NextResponse.json({ action: "updated", page: data });
+    const webui = data._links?.webui ?? "";
+    const pageUrl = webui ? `https://${auth.domain}.atlassian.net${webui}` : "";
+    return NextResponse.json({ action: "updated", page: data, pageUrl });
   } else {
     // Create new page
     const res = await fetch(base, {
@@ -105,7 +108,9 @@ export async function POST(req: NextRequest) {
       }),
     });
     const data = await res.json();
-    return NextResponse.json({ action: "created", page: data });
+    const webui = data._links?.webui ?? "";
+    const pageUrl = webui ? `https://${auth.domain}.atlassian.net${webui}` : "";
+    return NextResponse.json({ action: "created", page: data, pageUrl });
   }
 }
 
