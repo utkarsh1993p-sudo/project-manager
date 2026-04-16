@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { Drawer } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ArrowLeft, User, Calendar, Tag, AlertCircle } from "lucide-react";
+import {
+  RefreshCw, ArrowLeft, User, Calendar, Tag,
+  AlertCircle, Plus, X, CheckCircle2,
+} from "lucide-react";
 
 interface JiraIssue {
   id: string;
@@ -36,6 +39,9 @@ const PRIORITY_DOT: Record<string, string> = {
   Lowest: "bg-gray-300",
 };
 
+const ISSUE_TYPES = ["Task", "Story", "Bug", "Epic", "Subtask"];
+const PRIORITIES = ["Highest", "High", "Medium", "Low", "Lowest"];
+
 function extractText(description: JiraIssue["fields"]["description"]): string {
   if (!description) return "";
   return (
@@ -45,6 +51,20 @@ function extractText(description: JiraIssue["fields"]["description"]): string {
       .join(" ") ?? ""
   );
 }
+
+interface CreateForm {
+  summary: string;
+  description: string;
+  issueType: string;
+  priority: string;
+}
+
+const DEFAULT_FORM: CreateForm = {
+  summary: "",
+  description: "",
+  issueType: "Task",
+  priority: "Medium",
+};
 
 interface JiraDrawerProps {
   open: boolean;
@@ -57,6 +77,13 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<JiraIssue | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // Create issue state
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState<CreateForm>(DEFAULT_FORM);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) loadIssues();
@@ -86,18 +113,82 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
     await fetch(`/api/jira/sync?jiraKey=${issue.key}&status=${newStatus}`);
     await loadIssues();
     if (selected?.key === issue.key) {
-      setSelected((s) => s ? { ...s, fields: { ...s.fields, status: { ...s.fields.status, name: newStatus } } } : s);
+      setSelected((s) =>
+        s ? { ...s, fields: { ...s.fields, status: { ...s.fields.status, name: newStatus } } } : s
+      );
     }
     setUpdatingStatus(false);
   }
 
-  const title = selected ? `${selected.key} — ${selected.fields.summary}` : "JIRA Issues";
-  const subtitle = selected ? selected.fields.status.name : `${issues.length} issues`;
+  async function createIssue() {
+    if (!form.summary.trim()) {
+      setCreateError("Summary is required.");
+      return;
+    }
+    setCreateLoading(true);
+    setCreateError(null);
+    setCreateSuccess(null);
+    try {
+      const res = await fetch("/api/jira", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          summary: form.summary.trim(),
+          description: form.description.trim(),
+          issueType: form.issueType,
+          priority: form.priority,
+        }),
+      });
+      const data = await res.json();
+      if (data.key) {
+        setCreateSuccess(`Created ${data.key} successfully!`);
+        setForm(DEFAULT_FORM);
+        // Reload issues after short delay so Jira indexes it
+        setTimeout(() => {
+          loadIssues();
+          setCreateSuccess(null);
+          setCreating(false);
+        }, 1500);
+      } else {
+        const msg = data.errors
+          ? Object.values(data.errors).join(", ")
+          : data.errorMessages?.[0] ?? "Failed to create issue.";
+        setCreateError(msg);
+      }
+    } catch {
+      setCreateError("Network error. Please try again.");
+    } finally {
+      setCreateLoading(false);
+    }
+  }
+
+  function update(field: keyof CreateForm, value: string) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  const drawerTitle = selected
+    ? `${selected.key} — ${selected.fields.summary}`
+    : creating
+    ? "Create JIRA Issue"
+    : "JIRA Issues";
+
+  const drawerSubtitle = selected
+    ? selected.fields.status.name
+    : creating
+    ? "Add a new issue to your project"
+    : `${issues.length} issues`;
 
   return (
-    <Drawer open={open} onClose={() => { onClose(); setSelected(null); }} title={title} subtitle={subtitle} width="xl">
+    <Drawer
+      open={open}
+      onClose={() => { onClose(); setSelected(null); setCreating(false); }}
+      title={drawerTitle}
+      subtitle={drawerSubtitle}
+      width="xl"
+    >
       <div className="p-4 md:p-6">
-        {/* Issue detail view */}
+
+        {/* ── Issue detail ── */}
         {selected ? (
           <div>
             <button
@@ -108,27 +199,22 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
             </button>
 
             <div className="space-y-6">
-              {/* Meta */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs text-gray-400 font-medium mb-1">STATUS</p>
-                    <div className="flex items-center gap-2">
-                      <Badge className={STATUS_COLOR[selected.fields.status.statusCategory.colorName] ?? "bg-gray-100 text-gray-700"}>
-                        {selected.fields.status.name}
-                      </Badge>
-                    </div>
+                    <Badge className={STATUS_COLOR[selected.fields.status.statusCategory.colorName] ?? "bg-gray-100 text-gray-700"}>
+                      {selected.fields.status.name}
+                    </Badge>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400 font-medium mb-1">PRIORITY</p>
-                    <div className="flex items-center gap-2">
-                      {selected.fields.priority && (
-                        <>
-                          <span className={`w-2.5 h-2.5 rounded-full ${PRIORITY_DOT[selected.fields.priority.name] ?? "bg-gray-300"}`} />
-                          <span className="text-sm text-gray-700">{selected.fields.priority.name}</span>
-                        </>
-                      )}
-                    </div>
+                    {selected.fields.priority && (
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${PRIORITY_DOT[selected.fields.priority.name] ?? "bg-gray-300"}`} />
+                        <span className="text-sm text-gray-700">{selected.fields.priority.name}</span>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <p className="text-xs text-gray-400 font-medium mb-1">TYPE</p>
@@ -152,9 +238,7 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
                     <p className="text-xs text-gray-400 font-medium mb-1">DUE DATE</p>
                     <div className="flex items-center gap-2">
                       <Calendar size={13} className="text-gray-400" />
-                      <span className="text-sm text-gray-700">
-                        {selected.fields.duedate ?? "No due date"}
-                      </span>
+                      <span className="text-sm text-gray-700">{selected.fields.duedate ?? "No due date"}</span>
                     </div>
                   </div>
                   {selected.fields.labels.length > 0 && (
@@ -172,15 +256,15 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
                 </div>
               </div>
 
-              {/* Description */}
               <div>
                 <p className="text-xs text-gray-400 font-medium mb-2">DESCRIPTION</p>
                 <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 leading-relaxed min-h-20">
-                  {extractText(selected.fields.description) || <span className="text-gray-400 italic">No description</span>}
+                  {extractText(selected.fields.description) || (
+                    <span className="text-gray-400 italic">No description</span>
+                  )}
                 </div>
               </div>
 
-              {/* Update status */}
               <div>
                 <p className="text-xs text-gray-400 font-medium mb-2">UPDATE STATUS</p>
                 <div className="flex flex-wrap gap-2">
@@ -199,14 +283,124 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
               </div>
             </div>
           </div>
+
+        ) : creating ? (
+          /* ── Create issue form ── */
+          <div className="space-y-5">
+            <button
+              onClick={() => { setCreating(false); setCreateError(null); setCreateSuccess(null); setForm(DEFAULT_FORM); }}
+              className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+            >
+              <ArrowLeft size={14} /> Back to issues
+            </button>
+
+            {/* Issue type */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">Issue Type</label>
+              <div className="flex flex-wrap gap-2">
+                {ISSUE_TYPES.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => update("issueType", t)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                      form.issueType === t
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-700 border-gray-200 hover:border-blue-300"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Summary <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="What needs to be done?"
+                value={form.summary}
+                onChange={(e) => update("summary", e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                placeholder="Add more details..."
+                value={form.description}
+                onChange={(e) => update("description", e.target.value)}
+                rows={4}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+            </div>
+
+            {/* Priority */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">Priority</label>
+              <div className="flex flex-wrap gap-2">
+                {PRIORITIES.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => update("priority", p)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                      form.priority === p
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-700 border-gray-200 hover:border-blue-300"
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${PRIORITY_DOT[p]}`} />
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {createError && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl p-3">
+                <AlertCircle size={15} />
+                <p className="text-sm">{createError}</p>
+              </div>
+            )}
+
+            {createSuccess && (
+              <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-xl p-3">
+                <CheckCircle2 size={15} />
+                <p className="text-sm">{createSuccess}</p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-1">
+              <Button onClick={createIssue} disabled={createLoading || !form.summary.trim()}>
+                {createLoading ? "Creating..." : `Create ${form.issueType}`}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => { setCreating(false); setForm(DEFAULT_FORM); setCreateError(null); }}
+              >
+                <X size={14} /> Cancel
+              </Button>
+            </div>
+          </div>
+
         ) : (
-          /* Issues list */
+          /* ── Issues list ── */
           <div>
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-500">{issues.length} issues from your JIRA project</p>
-              <Button variant="secondary" size="sm" onClick={loadIssues} disabled={loading}>
-                <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" size="sm" onClick={loadIssues} disabled={loading}>
+                  <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+                </Button>
+                <Button size="sm" onClick={() => { setCreating(true); setCreateError(null); setCreateSuccess(null); }}>
+                  <Plus size={14} /> Create Issue
+                </Button>
+              </div>
             </div>
 
             {error && (
@@ -260,7 +454,12 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
               ))}
 
               {!loading && issues.length === 0 && !error && (
-                <p className="text-center text-gray-400 text-sm py-12">No issues found in this JIRA project.</p>
+                <div className="text-center py-12">
+                  <p className="text-gray-400 text-sm mb-3">No issues found in this JIRA project.</p>
+                  <Button size="sm" onClick={() => setCreating(true)}>
+                    <Plus size={14} /> Create your first issue
+                  </Button>
+                </div>
               )}
             </div>
           </div>
