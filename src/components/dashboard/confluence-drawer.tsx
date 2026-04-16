@@ -189,7 +189,7 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
 
   return (
     <Drawer open={open} onClose={resetAndClose} title={drawerTitle} subtitle={drawerSubtitle} width="xl">
-      <div className="p-4 md:p-6">
+      <div className="p-4 md:p-6 h-full overflow-y-auto">
 
         {/* ── Existing page detail ── */}
         {selected ? (

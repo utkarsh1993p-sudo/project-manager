@@ -5,7 +5,7 @@ import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Sparkles, RefreshCw, Copy, Check, ChevronDown,
+  Sparkles, RefreshCw, Copy, Check, ChevronDown, FileText,
 } from "lucide-react";
 import type { Project } from "@/types";
 
@@ -49,9 +49,9 @@ export function AiDrawer({ open, onClose, projects }: AiDrawerProps) {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        setError(data.error ?? "Generation failed.");
+        setError(data.error ?? "Generation failed. Please try again.");
       } else {
-        setResult(data.content);
+        setResult(data.content ?? "");
       }
     } catch {
       setError("Network error. Please try again.");
@@ -80,100 +80,128 @@ export function AiDrawer({ open, onClose, projects }: AiDrawerProps) {
       open={open}
       onClose={() => { onClose(); reset(); }}
       title="AI Assistant"
-      subtitle="Claude · Powered by Anthropic"
+      subtitle="Powered by Groq · llama-3.3-70b"
       width="xl"
     >
-      <div className="p-4 md:p-6 space-y-5">
+      {/* Two-panel layout — controls left, output right */}
+      <div className="flex h-full divide-x divide-gray-100">
 
-        {/* Header badge */}
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center shadow-sm">
-            <Sparkles size={16} className="text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Generate with AI</p>
-            <p className="text-xs text-gray-400">Select an action and optionally scope to one project</p>
-          </div>
-          <Badge className="ml-auto bg-emerald-100 text-emerald-700 border-0">Active</Badge>
-        </div>
+        {/* ── Left panel: controls ── */}
+        <div className="w-80 shrink-0 flex flex-col overflow-y-auto">
+          <div className="p-4 space-y-4">
+            {/* Scope */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Scope</label>
+              <div className="relative">
+                <select
+                  value={selectedProject}
+                  onChange={(e) => { setSelectedProject(e.target.value); reset(); }}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 appearance-none pr-8"
+                >
+                  <option value="all">All projects ({projects.length})</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
 
-        {/* Action selector */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-2">Action</label>
-          <div className="grid grid-cols-1 gap-2">
-            {ACTIONS.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => { setSelectedAction(a.id); reset(); }}
-                className={`text-left rounded-xl border px-4 py-3 transition-all ${
-                  selectedAction === a.id
-                    ? "border-violet-300 bg-violet-50"
-                    : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50"
-                }`}
-              >
-                <p className={`text-sm font-medium ${selectedAction === a.id ? "text-violet-800" : "text-gray-800"}`}>{a.label}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{a.description}</p>
-              </button>
-            ))}
+            {/* Action list */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Action</label>
+              <div className="space-y-1.5">
+                {ACTIONS.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => { setSelectedAction(a.id); reset(); }}
+                    className={`w-full text-left rounded-xl border px-3 py-2.5 transition-all ${
+                      selectedAction === a.id
+                        ? "border-violet-300 bg-violet-50"
+                        : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <p className={`text-xs font-semibold ${selectedAction === a.id ? "text-violet-800" : "text-gray-800"}`}>{a.label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5 leading-snug">{a.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Project scope */}
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">Scope</label>
-          <div className="relative">
-            <select
-              value={selectedProject}
-              onChange={(e) => { setSelectedProject(e.target.value); reset(); }}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 appearance-none pr-8"
+          {/* Generate button — sticky at bottom of left panel */}
+          <div className="mt-auto p-4 border-t border-gray-100">
+            <Button
+              onClick={generate}
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white"
             >
-              <option value="all">All projects ({projects.length})</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              {loading
+                ? <><RefreshCw size={13} className="animate-spin" /> Generating…</>
+                : <><Sparkles size={13} /> Generate</>
+              }
+            </Button>
           </div>
         </div>
 
-        {/* Generate button */}
-        <Button
-          onClick={generate}
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white"
-        >
-          {loading
-            ? <><RefreshCw size={14} className="animate-spin" /> Generating…</>
-            : <><Sparkles size={14} /> Generate {action.label}</>
-          }
-        </Button>
+        {/* ── Right panel: output ── */}
+        <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {/* Result */}
-        {result && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Output</p>
+          {/* Output header */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
+            <div className="flex items-center gap-2">
+              <FileText size={14} className="text-gray-400" />
+              <span className="text-sm font-semibold text-gray-700">{action.label}</span>
+              {result && <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Ready</Badge>}
+            </div>
+            {result && (
               <button
                 onClick={copyResult}
                 className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 transition-colors"
               >
                 {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                {copied ? "Copied" : "Copy"}
+                {copied ? "Copied!" : "Copy"}
               </button>
-            </div>
-            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 max-h-[50vh] overflow-y-auto">
-              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{result}</pre>
-            </div>
+            )}
           </div>
-        )}
 
+          {/* Output body */}
+          <div className="flex-1 overflow-y-auto p-5">
+            {loading && (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
+                <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center">
+                  <Sparkles size={20} className="text-violet-500 animate-pulse" />
+                </div>
+                <p className="text-sm font-medium text-gray-500">Generating {action.label}…</p>
+                <p className="text-xs text-gray-400">This usually takes 5–10 seconds</p>
+              </div>
+            )}
+
+            {error && !loading && (
+              <div className="flex flex-col items-center justify-center h-full gap-3">
+                <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 text-sm text-red-700 max-w-md text-center">
+                  {error}
+                </div>
+              </div>
+            )}
+
+            {result && !loading && (
+              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{result}</pre>
+            )}
+
+            {!result && !loading && !error && (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center">
+                  <Sparkles size={24} className="text-violet-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Select an action and generate</p>
+                  <p className="text-xs text-gray-400 mt-1">Output will appear here instantly</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </Drawer>
   );

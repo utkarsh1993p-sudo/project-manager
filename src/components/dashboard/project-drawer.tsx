@@ -66,7 +66,7 @@ export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
           <RefreshCw size={18} className="animate-spin mr-2" /> Loading latest data...
         </div>
       ) : (
-      <div className="p-4 md:p-6 space-y-5 md:space-y-6">
+      <div className="p-4 md:p-6 space-y-5 md:space-y-6 h-full overflow-y-auto">
         {/* Status bar */}
         <div className="flex items-center gap-3 flex-wrap">
           <Badge className={STATUS_STYLES[p.status]}>{p.status}</Badge>
