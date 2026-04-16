@@ -88,8 +88,9 @@ export async function POST(req: NextRequest) {
       }),
     });
     const data = await res.json();
+    const linkBase = data._links?.base ?? `https://${auth.domain}.atlassian.net/wiki`;
     const webui = data._links?.webui ?? "";
-    const pageUrl = webui ? `https://${auth.domain}.atlassian.net${webui}` : "";
+    const pageUrl = webui ? `${linkBase}${webui}` : "";
     return NextResponse.json({ action: "updated", page: data, pageUrl });
   } else {
     // Create new page
@@ -109,8 +110,9 @@ export async function POST(req: NextRequest) {
       }),
     });
     const data = await res.json();
+    const linkBase = data._links?.base ?? `https://${auth.domain}.atlassian.net/wiki`;
     const webui = data._links?.webui ?? "";
-    const pageUrl = webui ? `https://${auth.domain}.atlassian.net${webui}` : "";
+    const pageUrl = webui ? `${linkBase}${webui}` : "";
     return NextResponse.json({ action: "created", page: data, pageUrl });
   }
 }
