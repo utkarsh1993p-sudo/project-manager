@@ -44,6 +44,51 @@ function markdownToConfluenceHtml(markdown: string): string {
     .replace(/<p><\/p>/g, "");
 }
 
+function buildProjectOverviewHtml(
+  project: {
+    name: string;
+    status: string;
+    progress: number;
+    description?: string | null;
+    owner?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    team_members: Array<{ name: string; role: string; email: string }>;
+  },
+  taskCounts: Record<string, number>
+): string {
+  const total = Object.values(taskCounts).reduce((a, b) => a + b, 0);
+  const teamRows = project.team_members
+    .map((m) => `<tr><td>${m.name}</td><td>${m.role}</td><td>${m.email}</td></tr>`)
+    .join("") || "<tr><td colspan='3'>No team members</td></tr>";
+
+  return `<h1>${project.name}</h1>
+<table>
+  <tr><th>Status</th><td>${project.status}</td></tr>
+  <tr><th>Progress</th><td>${project.progress}%</td></tr>
+  ${project.owner ? `<tr><th>Owner</th><td>${project.owner}</td></tr>` : ""}
+  ${project.start_date ? `<tr><th>Start Date</th><td>${project.start_date}</td></tr>` : ""}
+  ${project.end_date ? `<tr><th>End Date</th><td>${project.end_date}</td></tr>` : ""}
+</table>
+${project.description ? `<p>${project.description}</p>` : ""}
+<h2>Team</h2>
+<table>
+  <tr><th>Name</th><th>Role</th><th>Email</th></tr>
+  ${teamRows}
+</table>
+<h2>Tasks Summary</h2>
+<table>
+  <tr><th>Status</th><th>Count</th></tr>
+  <tr><td>To Do</td><td>${taskCounts["todo"] ?? 0}</td></tr>
+  <tr><td>In Progress</td><td>${taskCounts["in-progress"] ?? 0}</td></tr>
+  <tr><td>In Review</td><td>${taskCounts["review"] ?? 0}</td></tr>
+  <tr><td>Done</td><td>${taskCounts["done"] ?? 0}</td></tr>
+  <tr><td>Blocked</td><td>${taskCounts["blocked"] ?? 0}</td></tr>
+  <tr><th>Total</th><th>${total}</th></tr>
+</table>
+<p><em>Last synced: ${new Date().toISOString()}</em></p>`;
+}
+
 const JIRA_STATUS_MAP: Record<string, string> = {
   "To Do": "todo", "In Progress": "in-progress", "In Review": "review",
   "Done": "done", "Blocked": "blocked",
@@ -119,8 +164,8 @@ export async function POST(req: NextRequest) {
     // ── 2. Supabase tasks (no jira_key) → JIRA (create new issues) ──────────
     try {
       const taskQuery = projectId
-        ? supabase.from("tasks").select("*").eq("project_id", projectId).is("jira_key", null)
-        : supabase.from("tasks").select("*").is("jira_key", null);
+        ? supabase.from("tasks").select("*, project:projects(name)").eq("project_id", projectId).is("jira_key", null)
+        : supabase.from("tasks").select("*, project:projects(name)").is("jira_key", null);
       const { data: newTasks } = await taskQuery;
 
       const priorityMap: Record<string, string> = {
@@ -129,6 +174,11 @@ export async function POST(req: NextRequest) {
 
       let pushed = 0;
       for (const task of newTasks ?? []) {
+        const projectName = (task as unknown as { project?: { name?: string } }).project?.name ?? "";
+        const projectLabel = projectName
+          ? projectName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+          : null;
+
         const res = await fetch(
           `https://${jiraAuth.domain}.atlassian.net/rest/api/3/issue`,
           {
@@ -140,6 +190,7 @@ export async function POST(req: NextRequest) {
                 summary: task.title,
                 issuetype: { name: "Task" },
                 priority: task.priority ? { name: priorityMap[task.priority] ?? "Medium" } : undefined,
+                labels: projectLabel ? [projectLabel] : undefined,
               },
             }),
           }
@@ -216,6 +267,62 @@ export async function POST(req: NextRequest) {
       results.supabaseToConfluence = { ok: true, pushed: confPushed, failed: confFailed };
     } catch (e) {
       results.supabaseToConfluence = { ok: false, error: String(e) };
+    }
+
+    // ── 3b. Push project overview pages to Confluence ──────────────────────
+    try {
+      const projectsQuery = projectId
+        ? supabase.from("projects").select("*, team_members(*), tasks(status)").eq("id", projectId)
+        : supabase.from("projects").select("*, team_members(*), tasks(status)");
+      const { data: projects } = await projectsQuery;
+
+      const confBase = `https://${confAuth.domain}.atlassian.net/wiki/rest/api/content`;
+      let overviewPushed = 0, overviewFailed = 0;
+
+      for (const project of projects ?? []) {
+        const taskCounts: Record<string, number> = { todo: 0, "in-progress": 0, review: 0, done: 0, blocked: 0 };
+        for (const t of (project.tasks as Array<{ status: string }>) ?? []) {
+          if (t.status in taskCounts) taskCounts[t.status]++;
+        }
+        const pageTitle = `${project.name} - Project Overview`;
+        const htmlContent = buildProjectOverviewHtml(project, taskCounts);
+
+        const searchRes = await fetch(
+          `${confBase}?spaceKey=${confAuth.spaceKey}&title=${encodeURIComponent(pageTitle)}&expand=version`,
+          { headers: confAuth.headers }
+        );
+        const searchData = await searchRes.json();
+        const existing = searchData.results?.[0];
+
+        if (existing) {
+          const r = await fetch(`${confBase}/${existing.id}`, {
+            method: "PUT",
+            headers: confAuth.headers,
+            body: JSON.stringify({
+              version: { number: existing.version.number + 1 },
+              title: pageTitle,
+              type: "page",
+              body: { storage: { value: htmlContent, representation: "storage" } },
+            }),
+          });
+          r.ok ? overviewPushed++ : overviewFailed++;
+        } else {
+          const r = await fetch(confBase, {
+            method: "POST",
+            headers: confAuth.headers,
+            body: JSON.stringify({
+              type: "page",
+              title: pageTitle,
+              space: { key: confAuth.spaceKey },
+              body: { storage: { value: htmlContent, representation: "storage" } },
+            }),
+          });
+          r.ok ? overviewPushed++ : overviewFailed++;
+        }
+      }
+      results.confluenceProjectOverviews = { ok: true, pushed: overviewPushed, failed: overviewFailed };
+    } catch (e) {
+      results.confluenceProjectOverviews = { ok: false, error: String(e) };
     }
 
     // ── 4. Confluence → Supabase (pull pages back into workspace_docs) ──────
