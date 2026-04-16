@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
     weekly_report: `You are a project manager. Generate a weekly status report based on this project data. Include: RAG status, summary of the week, completed items, blockers, next week's priorities, and team highlights.\n\nProject Data:\n${JSON.stringify(context, null, 2)}`,
 
     scope_breakdown: `You are a project manager. Break down the following project goals into specific, measurable deliverables with effort estimates (S/M/L/XL), dependencies, and suggested owners.\n\nProject Data:\n${JSON.stringify(context, null, 2)}`,
+
+    chat: `You are an expert AI project manager assistant. The user has asked: "${context.message}"\n\nAnswer concisely and helpfully based on the following project data. Use markdown formatting (bold, bullet points, numbered lists) where it improves clarity.\n\nProject Data:\n${JSON.stringify({ ...context, message: undefined }, null, 2)}`,
   };
 
   const prompt = prompts[action];
