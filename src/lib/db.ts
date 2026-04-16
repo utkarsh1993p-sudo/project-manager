@@ -64,7 +64,7 @@ async function hydrateProject(project: any, supabase: any): Promise<Project> {
     owner: project.owner ?? "",
     progress: (() => {
       const allTasks = tasks ?? [];
-      if (allTasks.length === 0) return project.progress ?? 0;
+      if (allTasks.length === 0) return 0;
       const done = allTasks.filter((t: any) => t.status === "done").length;
       return Math.round((done / allTasks.length) * 100);
     })(),
