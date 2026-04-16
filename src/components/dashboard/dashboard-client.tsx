@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { Project } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,8 +13,10 @@ import {
   Users, AlertTriangle, Clock, TrendingUp,
   Target, CheckCircle2, ArrowRight, Sparkles,
   ChevronRight, Zap, FileText, Settings2,
-  RefreshCw, Rocket,
+  RefreshCw, Rocket, CheckCircle, XCircle,
 } from "lucide-react";
+
+const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 const STATUS_STYLES: Record<string, string> = {
   active: "bg-green-100 text-green-700",
@@ -57,9 +59,40 @@ export function DashboardClient({
   const [jiraOpen, setJiraOpen] = useState(false);
   const [confluenceOpen, setConfluenceOpen] = useState(false);
 
+  // Sync state
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [syncResults, setSyncResults] = useState<Record<string, { ok: boolean; error?: string }> | null>(null);
+  const [showSyncResults, setShowSyncResults] = useState(false);
+
   const totalTasks = projects.flatMap((p) => p.tasks).length;
   const openRisks = projects.flatMap((p) => p.risks.filter((r) => r.status === "open")).length;
   const activeCount = projects.filter((p) => p.status === "active").length;
+
+  const runSync = useCallback(async (silent = false) => {
+    if (syncing) return;
+    setSyncing(true);
+    if (!silent) setShowSyncResults(false);
+    try {
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      setLastSyncedAt(new Date());
+      setSyncResults(data.results ?? null);
+      if (!silent) setShowSyncResults(true);
+    } finally {
+      setSyncing(false);
+    }
+  }, [syncing]);
+
+  // Auto-poll every 5 minutes
+  useEffect(() => {
+    const id = setInterval(() => runSync(true), SYNC_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [runSync]);
 
   return (
     <>
@@ -96,6 +129,69 @@ export function DashboardClient({
             );
           })}
         </div>
+
+        {/* Sync bar */}
+        <div className="flex items-center justify-between gap-4 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-2 h-2 rounded-full ${jiraConnected && confluenceConnected ? "bg-green-500" : "bg-yellow-400"}`} />
+            <div>
+              <p className="text-sm font-medium text-gray-800">
+                {jiraConnected && confluenceConnected ? "All integrations connected" : "Partial integrations"}
+              </p>
+              <p className="text-xs text-gray-500">
+                {lastSyncedAt
+                  ? `Last synced ${lastSyncedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · Auto-syncs every 5 min`
+                  : "Auto-syncs every 5 min · Click to sync now"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => runSync(false)}
+            disabled={syncing}
+            className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50 transition-colors shrink-0"
+          >
+            <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+            {syncing ? "Syncing..." : "Sync All"}
+          </button>
+        </div>
+
+        {/* Sync results */}
+        {showSyncResults && syncResults && (
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sync Results</p>
+              <button onClick={() => setShowSyncResults(false)} className="text-xs text-gray-400 hover:text-gray-600">Dismiss</button>
+            </div>
+            {Object.entries(syncResults).map(([key, val]) => {
+              const result = val as { ok: boolean; error?: string; synced?: number; created?: number; updated?: number; pushed?: number; pulled?: number; failed?: number };
+              const label: Record<string, string> = {
+                jiraToSupabase: "JIRA → Supabase",
+                supabaseToJira: "Supabase → JIRA",
+                supabaseToConfluence: "Supabase → Confluence",
+                confluenceToSupabase: "Confluence → Supabase",
+              };
+              const detail = result.ok
+                ? [
+                    result.synced != null && `${result.synced} synced`,
+                    result.created != null && `${result.created} created`,
+                    result.updated != null && `${result.updated} updated`,
+                    result.pushed != null && `${result.pushed} pushed`,
+                    result.pulled != null && `${result.pulled} pulled`,
+                    result.failed != null && result.failed > 0 && `${result.failed} failed`,
+                  ].filter(Boolean).join(" · ")
+                : result.error;
+              return (
+                <div key={key} className="flex items-center gap-2 text-sm">
+                  {result.ok
+                    ? <CheckCircle size={14} className="text-green-500 shrink-0" />
+                    : <XCircle size={14} className="text-red-400 shrink-0" />}
+                  <span className="font-medium text-gray-700 w-44 shrink-0">{label[key] ?? key}</span>
+                  <span className={result.ok ? "text-gray-500" : "text-red-500"}>{detail}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Integration tiles */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
