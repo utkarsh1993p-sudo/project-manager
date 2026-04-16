@@ -49,8 +49,9 @@ export async function GET(req: NextRequest) {
 
   const res = await fetch(url, { headers: auth.headers });
   const data = await res.json();
-  // Include domain so clients can construct full page URLs from _links.webui
-  return NextResponse.json({ ...data, confluenceDomain: auth.domain });
+  // Use _links.base from Atlassian's own response — authoritative, never stale from stored domain
+  const confluenceBase: string = data._links?.base ?? `https://${auth.domain}.atlassian.net/wiki`;
+  return NextResponse.json({ ...data, confluenceBase });
 }
 
 // POST /api/confluence — create or update a page

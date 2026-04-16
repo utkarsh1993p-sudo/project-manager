@@ -43,7 +43,7 @@ const DEFAULT_NEW_PAGE = { title: "", content: "" };
 
 export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
   const [pages, setPages] = useState<ConfluencePage[]>([]);
-  const [confluenceDomain, setConfluenceDomain] = useState("");
+  const [confluenceBase, setConfluenceBase] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +78,7 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
       }
       const data = await res.json();
       setPages(data.results ?? []);
-      if (data.confluenceDomain) setConfluenceDomain(data.confluenceDomain);
+      if (data.confluenceBase) setConfluenceBase(data.confluenceBase);
     } catch {
       setError("Could not reach Confluence. Configure in Settings.");
     } finally {
@@ -221,9 +221,9 @@ export function ConfluenceDrawer({ open, onClose }: ConfluenceDrawerProps) {
                 <p className="text-sm font-medium text-blue-900">{selected.title}</p>
                 <p className="text-xs text-blue-600">{selected.space?.name} · Version {selected.version?.number}</p>
               </div>
-              {selected._links?.webui && confluenceDomain && (
+              {selected._links?.webui && confluenceBase && (
                 <a
-                  href={`https://${confluenceDomain}.atlassian.net${selected._links.webui}`}
+                  href={`${confluenceBase}${selected._links.webui}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-blue-600 hover:underline shrink-0"
