@@ -1,13 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Project } from "@/types";
 import { Drawer } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { formatDate, getRiskColor, getStatusColor } from "@/lib/utils";
+import { formatDate, getRiskColor } from "@/lib/utils";
 import {
   Target, Users, AlertTriangle, CheckCircle2,
-  Clock, TrendingUp, Calendar,
+  TrendingUp, Calendar, RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -33,40 +33,59 @@ interface ProjectDrawerProps {
 }
 
 export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
-  if (!project) return null;
+  const [data, setData] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const doneTasks = project.tasks.filter((t) => t.status === "done").length;
-  const openRisks = project.risks.filter((r) => r.status === "open").length;
-  const nextMilestone = project.timeline.find((m) => m.status !== "completed");
+  useEffect(() => {
+    if (!project) { setData(null); return; }
+    setLoading(true);
+    fetch(`/api/projects/${project.id}`)
+      .then((r) => r.json())
+      .then((fresh) => setData(fresh))
+      .catch(() => setData(project)) // fall back to prop on error
+      .finally(() => setLoading(false));
+  }, [project?.id]);
+
+  const p = data ?? project;
+  if (!p) return null;
+
+  const doneTasks = p.tasks.filter((t) => t.status === "done").length;
+  const openRisks = p.risks.filter((r) => r.status === "open").length;
+  const nextMilestone = p.timeline.find((m) => m.status !== "completed");
 
   return (
     <Drawer
       open={!!project}
       onClose={onClose}
-      title={project.name}
-      subtitle={project.description}
+      title={p.name}
+      subtitle={p.description}
       width="xl"
     >
+      {loading ? (
+        <div className="flex items-center justify-center py-24 text-gray-400">
+          <RefreshCw size={18} className="animate-spin mr-2" /> Loading latest data...
+        </div>
+      ) : (
       <div className="p-4 md:p-6 space-y-5 md:space-y-6">
         {/* Status bar */}
         <div className="flex items-center gap-3 flex-wrap">
-          <Badge className={STATUS_STYLES[project.status]}>{project.status}</Badge>
-          <span className="text-sm text-gray-500">{formatDate(project.startDate)} → {formatDate(project.endDate)}</span>
+          <Badge className={STATUS_STYLES[p.status]}>{p.status}</Badge>
+          <span className="text-sm text-gray-500">{formatDate(p.startDate)} → {formatDate(p.endDate)}</span>
           <div className="flex items-center gap-2 flex-1">
             <div className="flex-1 max-w-48 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${project.progress}%` }} />
+              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${p.progress}%` }} />
             </div>
-            <span className="text-sm font-semibold text-gray-700">{project.progress}%</span>
+            <span className="text-sm font-semibold text-gray-700">{p.progress}%</span>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Tasks", value: project.tasks.length, icon: CheckCircle2, color: "text-blue-600 bg-blue-50" },
+            { label: "Tasks", value: p.tasks.length, icon: CheckCircle2, color: "text-blue-600 bg-blue-50" },
             { label: "Done", value: doneTasks, icon: CheckCircle2, color: "text-green-600 bg-green-50" },
             { label: "Open Risks", value: openRisks, icon: AlertTriangle, color: "text-red-600 bg-red-50" },
-            { label: "Team", value: project.team.length, icon: Users, color: "text-purple-600 bg-purple-50" },
+            { label: "Team", value: p.team.length, icon: Users, color: "text-purple-600 bg-purple-50" },
           ].map((s) => {
             const Icon = s.icon;
             return (
@@ -87,7 +106,7 @@ export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
             <Target size={14} className="text-blue-600" /> Goals
           </h3>
           <ul className="space-y-1.5">
-            {project.goals.map((g, i) => (
+            {p.goals.map((g, i) => (
               <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
                 <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
                 {g}
@@ -103,13 +122,13 @@ export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
               <CheckCircle2 size={14} className="text-green-600" /> Recent Tasks
             </h3>
             <div className="space-y-1.5">
-              {project.tasks.slice(0, 6).map((t) => (
+              {p.tasks.slice(0, 6).map((t) => (
                 <div key={t.id} className="flex items-center gap-2">
                   <Badge className={`text-xs shrink-0 ${TASK_STATUS_COLORS[t.status]}`}>{t.status}</Badge>
                   <span className="text-xs text-gray-700 truncate">{t.title}</span>
                 </div>
               ))}
-              {project.tasks.length === 0 && <p className="text-xs text-gray-400">No tasks yet</p>}
+              {p.tasks.length === 0 && <p className="text-xs text-gray-400">No tasks yet</p>}
             </div>
           </div>
 
@@ -119,13 +138,13 @@ export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
               <AlertTriangle size={14} className="text-red-500" /> Risks
             </h3>
             <div className="space-y-1.5">
-              {project.risks.slice(0, 4).map((r) => (
+              {p.risks.slice(0, 4).map((r) => (
                 <div key={r.id} className="flex items-center gap-2">
                   <Badge className={`text-xs shrink-0 ${getRiskColor(r.level)}`}>{r.level}</Badge>
                   <span className="text-xs text-gray-700 truncate">{r.title}</span>
                 </div>
               ))}
-              {project.risks.length === 0 && <p className="text-xs text-gray-400">No risks logged</p>}
+              {p.risks.length === 0 && <p className="text-xs text-gray-400">No risks logged</p>}
             </div>
           </div>
         </div>
@@ -147,7 +166,7 @@ export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
             <Users size={14} className="text-purple-600" /> Team
           </h3>
           <div className="flex flex-wrap gap-2">
-            {project.team.map((m) => (
+            {p.team.map((m) => (
               <div key={m.id} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-full px-3 py-1">
                 <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
                   {m.name.charAt(0)}
@@ -161,13 +180,14 @@ export function ProjectDrawer({ project, onClose }: ProjectDrawerProps) {
 
         {/* CTA */}
         <div className="pt-2 border-t border-gray-100">
-          <Link href={`/projects/${project.id}`}>
+          <Link href={`/projects/${p.id}`}>
             <Button className="w-full">
               Open Full Project <TrendingUp size={14} />
             </Button>
           </Link>
         </div>
       </div>
+      )}
     </Drawer>
   );
 }
