@@ -12,9 +12,25 @@ async function getAtlassianAuth(type: "jira" | "confluence") {
   return { domain, token, headers: { Authorization: `Basic ${token}`, "Content-Type": "application/json", Accept: "application/json" }, data };
 }
 
-function buildConfluenceHtml(name: string, description: string, goals: string[]): string {
-  const goalList = goals.map((g) => `<li>${g}</li>`).join("");
-  return `<h1>${name}</h1><h2>Overview</h2><p>${description}</p><h2>Goals</h2><ul>${goalList}</ul><h2>Status</h2><p>This project was just created. Update this page as the project progresses.</p>`;
+// Confluence storage format — uses only safe XHTML elements accepted by the Fabric editor.
+// Avoid: <ac:*> macros, nested block elements, bare text nodes outside <p>.
+function buildConfluenceStorageXml(name: string, description: string, goals: string[]): string {
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const goalItems = goals.length
+    ? `<ul>${goals.map((g) => `<li><p>${esc(g)}</p></li>`).join("")}</ul>`
+    : "<p>No goals defined yet.</p>";
+
+  return [
+    `<h1>${esc(name)}</h1>`,
+    `<h2>Overview</h2>`,
+    `<p>${esc(description || "No description provided.")}</p>`,
+    `<h2>Goals</h2>`,
+    goalItems,
+    `<h2>Status</h2>`,
+    `<p>Project created. Update this page as it progresses.</p>`,
+  ].join("");
 }
 
 // GET /api/projects/:id is in [id]/route.ts
@@ -82,6 +98,9 @@ export async function POST(req: NextRequest) {
         const types = await typesRes.json();
         const epicType = Array.isArray(types) ? types.find((t: { name: string }) => t.name === "Epic") : null;
 
+        // Note: customfield_10011 (Epic Name) is omitted — it's only available on
+        // specific JIRA screens and throws a 400 when not configured. The summary
+        // field is sufficient to name the epic.
         const issueBody = {
           fields: {
             project: { key: projectKey },
@@ -91,7 +110,6 @@ export async function POST(req: NextRequest) {
               type: "doc", version: 1,
               content: [{ type: "paragraph", content: [{ type: "text", text: description || name }] }],
             },
-            ...(epicType ? { customfield_10011: jiraEpicName || name } : {}),
           },
         };
 
@@ -122,7 +140,7 @@ export async function POST(req: NextRequest) {
       } else {
         const spaceKey = confluenceSpaceKey || auth.data.confluence_space_key;
         const pageTitle = confluencePageTitle || name;
-        const html = buildConfluenceHtml(name, description || "", goals || []);
+        const html = buildConfluenceStorageXml(name, description || "", goals || []);
 
         const pageRes = await fetch(
           `https://${auth.domain}.atlassian.net/wiki/rest/api/content`,
