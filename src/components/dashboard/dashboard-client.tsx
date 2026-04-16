@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import type { Project } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,13 +64,15 @@ export function DashboardClient({
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncResults, setSyncResults] = useState<Record<string, { ok: boolean; error?: string }> | null>(null);
   const [showSyncResults, setShowSyncResults] = useState(false);
+  const syncingRef = useRef(false);
 
   const totalTasks = projects.flatMap((p) => p.tasks).length;
   const openRisks = projects.flatMap((p) => p.risks.filter((r) => r.status === "open")).length;
   const activeCount = projects.filter((p) => p.status === "active").length;
 
   const runSync = useCallback(async (silent = false) => {
-    if (syncing) return;
+    if (syncingRef.current) return;
+    syncingRef.current = true;
     setSyncing(true);
     if (!silent) setShowSyncResults(false);
     try {
@@ -84,9 +86,10 @@ export function DashboardClient({
       setSyncResults(data.results ?? null);
       if (!silent) setShowSyncResults(true);
     } finally {
+      syncingRef.current = false;
       setSyncing(false);
     }
-  }, [syncing]);
+  }, []);
 
   // Auto-poll every 5 minutes
   useEffect(() => {

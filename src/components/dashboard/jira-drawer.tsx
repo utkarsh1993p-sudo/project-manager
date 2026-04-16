@@ -218,7 +218,7 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
                   </div>
                   <div>
                     <p className="text-xs text-gray-400 font-medium mb-1">TYPE</p>
-                    <span className="text-sm text-gray-700">{selected.fields.issuetype.name}</span>
+                    <span className="text-sm text-gray-700">{selected.fields.issuetype?.name}</span>
                   </div>
                 </div>
 
@@ -430,7 +430,7 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-mono text-blue-600 shrink-0">{issue.key}</span>
-                        <span className="text-xs text-gray-400">{issue.fields.issuetype.name}</span>
+                        <span className="text-xs text-gray-400">{issue.fields.issuetype?.name}</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900 group-hover:text-blue-700 truncate">
                         {issue.fields.summary}
