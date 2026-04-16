@@ -399,6 +399,28 @@ export async function POST(req: NextRequest) {
     results.confluenceToSupabase = { ok: false, error: "Confluence not connected" };
   }
 
+  // ── 5. Recalculate + persist progress for all affected projects ────────────
+  try {
+    const projectQuery = projectId
+      ? supabase.from("projects").select("id").eq("id", projectId)
+      : supabase.from("projects").select("id");
+    const { data: projectRows } = await projectQuery;
+
+    for (const row of projectRows ?? []) {
+      const { data: allTasks } = await supabase
+        .from("tasks")
+        .select("status")
+        .eq("project_id", row.id);
+      const total = allTasks?.length ?? 0;
+      const done = allTasks?.filter((t) => t.status === "done").length ?? 0;
+      const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+      await supabase.from("projects").update({ progress }).eq("id", row.id);
+    }
+    results.progressSync = { ok: true, updated: projectRows?.length ?? 0 };
+  } catch (e) {
+    results.progressSync = { ok: false, error: String(e) };
+  }
+
   return NextResponse.json({ ok: true, syncedAt: new Date().toISOString(), results });
 }
 
