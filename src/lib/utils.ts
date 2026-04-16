@@ -24,6 +24,17 @@ export function getStatusColor(status: string): string {
   return map[status] ?? "bg-gray-100 text-gray-700";
 }
 
+// Normalizes any Atlassian domain input to just the subdomain.
+// Handles: "company", "company.atlassian.net", "https://company.atlassian.net",
+//          "https://company.atlassian.net/wiki/...", etc.
+export function normalizeAtlassianDomain(raw: string): string {
+  return raw
+    .replace(/^https?:\/\//i, "")       // strip protocol
+    .replace(/\.atlassian\.net.*$/i, "") // strip .atlassian.net and everything after
+    .replace(/\/$/, "")                  // strip trailing slash
+    .trim();
+}
+
 export function getRiskColor(level: string): string {
   const map: Record<string, string> = {
     low: "bg-green-100 text-green-700",

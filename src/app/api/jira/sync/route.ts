@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeAtlassianDomain } from "@/lib/utils";
 
 // POST /api/jira/sync?projectId=xxx — pull JIRA issues → upsert into tasks
 export async function POST(req: NextRequest) {
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   // Fetch JIRA issues
   const res = await fetch(
-    `https://${integration.domain}.atlassian.net/rest/api/3/search/jql?jql=project=${integration.jira_project_key} ORDER BY updated DESC&maxResults=100&fields=summary,status,priority,assignee,duedate,labels,description`,
+    `https://${normalizeAtlassianDomain(integration.domain)}.atlassian.net/rest/api/3/search/jql?jql=project=${integration.jira_project_key} ORDER BY updated DESC&maxResults=100&fields=summary,status,priority,assignee,duedate,labels,description`,
     { headers }
   );
 
@@ -119,7 +120,7 @@ export async function GET(req: NextRequest) {
 
   // Get available transitions
   const transRes = await fetch(
-    `https://${integration.domain}.atlassian.net/rest/api/3/issue/${jiraKey}/transitions`,
+    `https://${normalizeAtlassianDomain(integration.domain)}.atlassian.net/rest/api/3/issue/${jiraKey}/transitions`,
     { headers }
   );
   const transData = await transRes.json();
@@ -144,7 +145,7 @@ export async function GET(req: NextRequest) {
   }
 
   await fetch(
-    `https://${integration.domain}.atlassian.net/rest/api/3/issue/${jiraKey}/transitions`,
+    `https://${normalizeAtlassianDomain(integration.domain)}.atlassian.net/rest/api/3/issue/${jiraKey}/transitions`,
     { method: "POST", headers, body: JSON.stringify({ transition: { id: transition.id } }) }
   );
 

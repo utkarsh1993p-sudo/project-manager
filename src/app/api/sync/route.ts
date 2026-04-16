@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeAtlassianDomain } from "@/lib/utils";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -8,7 +9,7 @@ async function getJiraAuth() {
   const { data } = await supabase.from("integrations").select("*").eq("type", "jira").single();
   if (!data) return null;
   const token = Buffer.from(`${data.email}:${data.api_token}`).toString("base64");
-  const domain = data.domain.replace(/\.atlassian\.net\/?$/, "").trim();
+  const domain = normalizeAtlassianDomain(data.domain);
   return {
     headers: { Authorization: `Basic ${token}`, Accept: "application/json", "Content-Type": "application/json" },
     domain,
@@ -21,7 +22,7 @@ async function getConfluenceAuth() {
   const { data } = await supabase.from("integrations").select("*").eq("type", "confluence").single();
   if (!data) return null;
   const token = Buffer.from(`${data.email}:${data.api_token}`).toString("base64");
-  const domain = data.domain.replace(/\.atlassian\.net\/?$/, "").trim();
+  const domain = normalizeAtlassianDomain(data.domain);
   return {
     headers: { Authorization: `Basic ${token}`, Accept: "application/json", "Content-Type": "application/json" },
     domain,

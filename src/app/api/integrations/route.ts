@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeAtlassianDomain } from "@/lib/utils";
 
 // GET — fetch all saved integrations (tokens redacted)
 export async function GET() {
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   if (existing) {
     const updatePayload: Record<string, unknown> = {
-      domain: body.domain,
+      domain: normalizeAtlassianDomain(body.domain),
       email: body.email,
       jira_project_key: body.jira_project_key ?? null,
       confluence_space_key: body.confluence_space_key ?? null,
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
   } else {
     const { error } = await supabase.from("integrations").insert({
       type: body.type,
-      domain: body.domain,
+      domain: normalizeAtlassianDomain(body.domain),
       email: body.email,
       api_token: body.api_token,
       jira_project_key: body.jira_project_key ?? null,
