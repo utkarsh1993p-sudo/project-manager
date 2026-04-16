@@ -66,7 +66,7 @@ export function DashboardClient({
   const [showSyncResults, setShowSyncResults] = useState(false);
   const syncingRef = useRef(false);
 
-  const totalTasks = projects.flatMap((p) => p.tasks).length;
+  const totalTasks = projects.flatMap((p) => p.tasks).filter((t) => t.status !== "done").length;
   const openRisks = projects.flatMap((p) => p.risks.filter((r) => r.status === "open")).length;
   const activeCount = projects.filter((p) => p.status === "active").length;
 
