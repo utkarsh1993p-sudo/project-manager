@@ -61,6 +61,7 @@ export const MOCK_PROJECTS: Project[] = [
     startDate: "2026-03-01",
     endDate: "2026-06-30",
     owner: "Utkarsh Pandey",
+    projectLabel: "PLQ2",
     progress: 42,
     goals: [
       "Launch app on iOS and Android by June 30",
@@ -418,6 +419,7 @@ Launch the new mobile app to market with a complete marketing campaign and suppo
     startDate: "2026-05-01",
     endDate: "2026-09-30",
     owner: "Utkarsh Pandey",
+    projectLabel: "IM",
     progress: 8,
     goals: [
       "Migrate 100% of services to AWS by September 30",

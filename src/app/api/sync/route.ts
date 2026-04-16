@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { normalizeAtlassianDomain } from "@/lib/utils";
+import { normalizeAtlassianDomain, generateProjectLabel } from "@/lib/utils";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -108,12 +108,29 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const results: Record<string, unknown> = {};
 
-  // ── 1. JIRA → Supabase (pull issues into tasks) ──────────────────────────
+  // ── 0. Ensure all projects have a project_label (backfill) ─────────────────
+  {
+    const { data: unlabelled } = await supabase
+      .from("projects").select("id, name, project_label").is("project_label", null);
+    const { data: labelled } = await supabase
+      .from("projects").select("project_label").not("project_label", "is", null);
+    const used = new Set((labelled ?? []).map((r: { project_label: string }) => r.project_label?.toUpperCase()));
+    for (const p of unlabelled ?? []) {
+      let base = generateProjectLabel(p.name);
+      let label = base;
+      let suffix = 2;
+      while (used.has(label)) { label = `${base}${suffix}`; suffix++; }
+      used.add(label);
+      await supabase.from("projects").update({ project_label: label }).eq("id", p.id);
+    }
+  }
+
+  // ── 1. JIRA → Supabase (pull issues, route to project via label) ───────────
   const jiraAuth = await getJiraAuth();
   if (jiraAuth) {
     try {
       const jiraRes = await fetch(
-        `https://${jiraAuth.domain}.atlassian.net/rest/api/3/search/jql?jql=project=${jiraAuth.projectKey} ORDER BY updated DESC&maxResults=100&fields=summary,status,priority,assignee,duedate,labels`,
+        `https://${jiraAuth.domain}.atlassian.net/rest/api/3/search/jql?jql=project=${jiraAuth.projectKey} ORDER BY updated DESC&maxResults=200&fields=summary,status,priority,assignee,duedate,labels`,
         { headers: jiraAuth.headers }
       );
       if (jiraRes.ok) {
@@ -121,14 +138,33 @@ export async function POST(req: NextRequest) {
         const issues = jiraData.issues ?? [];
         let jiraCreated = 0, jiraUpdated = 0;
 
-        // Get projects to map tasks to
-        const projectQuery = projectId
-          ? supabase.from("projects").select("id").eq("id", projectId)
-          : supabase.from("projects").select("id");
-        const { data: projects } = await projectQuery;
+        // Build label → project_id map from all projects
+        const allProjectsQ = projectId
+          ? supabase.from("projects").select("id, project_label").eq("id", projectId)
+          : supabase.from("projects").select("id, project_label");
+        const { data: allProjects } = await allProjectsQ;
 
+        const labelToProjectId = new Map<string, string>();
+        let fallbackProjectId: string | null = null;
+        for (const p of allProjects ?? []) {
+          if (p.project_label) labelToProjectId.set(p.project_label.toUpperCase(), p.id);
+          if (!fallbackProjectId) fallbackProjectId = p.id;
+        }
+
+        const fetchedKeys = new Set<string>();
         for (const issue of issues) {
+          fetchedKeys.add(issue.key);
           const fields = issue.fields;
+          const issueLabels: string[] = (fields.labels ?? []).map((l: string) => l.toUpperCase());
+
+          // Find which project this issue belongs to via label match
+          const matchedLabel = issueLabels.find((l) => labelToProjectId.has(l));
+          const targetProjectId = matchedLabel
+            ? labelToProjectId.get(matchedLabel)!
+            : (projectId ?? fallbackProjectId);
+
+          if (!targetProjectId) continue;
+
           const taskData = {
             title: `[${issue.key}] ${fields.summary}`,
             status: JIRA_STATUS_MAP[fields.status?.name] ?? "todo",
@@ -139,28 +175,24 @@ export async function POST(req: NextRequest) {
             jira_key: issue.key,
           };
 
-          // Find all tasks for this jira_key (may be duplicates from prior sync bugs)
           const { data: existingTasks } = await supabase
             .from("tasks").select("id, project_id").eq("jira_key", issue.key);
-
           const existing = existingTasks?.[0] ?? null;
 
           if (existing) {
             await supabase.from("tasks").update(taskData).eq("id", existing.id);
-            // Delete duplicate rows for the same jira_key
             if (existingTasks && existingTasks.length > 1) {
               const dupeIds = existingTasks.slice(1).map((t) => t.id);
               await supabase.from("tasks").delete().in("id", dupeIds);
             }
             jiraUpdated++;
-          } else if (projects && projects.length > 0) {
-            const targetProjectId = projectId ?? projects[0].id;
+          } else {
             await supabase.from("tasks").insert({ ...taskData, project_id: targetProjectId });
             jiraCreated++;
           }
         }
+
         // Reconcile: mark tasks as "done" if their JIRA issue no longer exists
-        const fetchedKeys = new Set(issues.map((i: { key: string }) => i.key));
         const reconcileQuery = projectId
           ? supabase.from("tasks").select("id, jira_key").eq("project_id", projectId).not("jira_key", "is", null)
           : supabase.from("tasks").select("id, jira_key").not("jira_key", "is", null);
@@ -182,11 +214,11 @@ export async function POST(req: NextRequest) {
       results.jiraToSupabase = { ok: false, error: String(e) };
     }
 
-    // ── 2. Supabase tasks (no jira_key) → JIRA (create new issues) ──────────
+    // ── 2. Supabase tasks (no jira_key) → JIRA (tag with project_label) ───────
     try {
       const taskQuery = projectId
-        ? supabase.from("tasks").select("*, project:projects(name)").eq("project_id", projectId).is("jira_key", null)
-        : supabase.from("tasks").select("*, project:projects(name)").is("jira_key", null);
+        ? supabase.from("tasks").select("*, project:projects(name, project_label)").eq("project_id", projectId).is("jira_key", null)
+        : supabase.from("tasks").select("*, project:projects(name, project_label)").is("jira_key", null);
       const { data: newTasks } = await taskQuery;
 
       const priorityMap: Record<string, string> = {
@@ -195,10 +227,12 @@ export async function POST(req: NextRequest) {
 
       let pushed = 0;
       for (const task of newTasks ?? []) {
-        const projectName = (task as unknown as { project?: { name?: string } }).project?.name ?? "";
-        const projectLabel = projectName
-          ? projectName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-          : null;
+        const proj = (task as unknown as { project?: { name?: string; project_label?: string } }).project;
+        const projectLabel = proj?.project_label
+          ? proj.project_label.toLowerCase()
+          : proj?.name
+            ? generateProjectLabel(proj.name).toLowerCase()
+            : null;
 
         const res = await fetch(
           `https://${jiraAuth.domain}.atlassian.net/rest/api/3/issue`,
@@ -211,7 +245,7 @@ export async function POST(req: NextRequest) {
                 summary: task.title,
                 issuetype: { name: "Task" },
                 priority: task.priority ? { name: priorityMap[task.priority] ?? "Medium" } : undefined,
-                labels: projectLabel ? [projectLabel] : undefined,
+                labels: projectLabel ? [projectLabel] : [],
               },
             }),
           }

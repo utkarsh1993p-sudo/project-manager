@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus, X, ChevronRight, ChevronLeft, Check,
   AlertCircle, ExternalLink, Sparkles, RefreshCw,
-  Target, Calendar, User, FileText,
+  Target, Calendar, User, FileText, Tag,
 } from "lucide-react";
+import { generateProjectLabel } from "@/lib/utils";
 
 interface CreateProjectDrawerProps {
   open: boolean;
@@ -37,6 +38,7 @@ const EMPTY_FORM = {
   startDate: "",
   endDate: "",
   owner: "",
+  projectLabel: "",
 };
 
 export function CreateProjectDrawer({
@@ -63,7 +65,16 @@ export function CreateProjectDrawer({
   const [error, setError] = useState<string | null>(null);
 
   function updateForm(k: string, v: string) {
-    setForm((prev) => ({ ...prev, [k]: v }));
+    setForm((prev) => {
+      const next = { ...prev, [k]: v };
+      // Auto-fill label and integration names from project name
+      if (k === "name") {
+        if (!prev.projectLabel || prev.projectLabel === generateProjectLabel(prev.name)) {
+          next.projectLabel = generateProjectLabel(v);
+        }
+      }
+      return next;
+    });
     if (k === "name") {
       setJiraEpicName(v);
       setConfluencePageTitle(v);
@@ -103,6 +114,7 @@ export function CreateProjectDrawer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          projectLabel: form.projectLabel || generateProjectLabel(form.name),
           goals: cleanGoals,
           createJiraEpic,
           jiraProjectKey,
@@ -181,6 +193,29 @@ export function CreateProjectDrawer({
                     onChange={(e) => updateForm("name", e.target.value)}
                     className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                    <Tag size={11} className="inline mr-1" />Project Label
+                    <span className="ml-1 text-gray-400 font-normal">(used as JIRA label)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. PLQ2"
+                    value={form.projectLabel}
+                    onChange={(e) => updateForm("projectLabel", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Auto-suggested · max 8 chars</p>
+                </div>
+                <div className="col-span-1 flex flex-col justify-start">
+                  <div className="mt-0.5 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 flex flex-col gap-1">
+                    <p className="text-xs font-semibold text-blue-700">Why this matters</p>
+                    <p className="text-xs text-blue-600 leading-snug">JIRA issues tagged <code className="bg-blue-100 px-1 rounded">{form.projectLabel || "…"}</code> will sync to this project only</p>
+                  </div>
                 </div>
               </div>
 
@@ -373,6 +408,7 @@ export function CreateProjectDrawer({
                 {form.description && <p className="text-xs text-gray-500">{form.description}</p>}
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className="bg-blue-100 text-blue-700 border-0 text-xs">{form.status}</Badge>
+                  <Badge className="bg-violet-100 text-violet-700 border-0 text-xs font-mono">{form.projectLabel || generateProjectLabel(form.name)}</Badge>
                   {form.owner && <span className="text-xs text-gray-500">Owner: {form.owner}</span>}
                   {form.startDate && <span className="text-xs text-gray-500">{form.startDate} → {form.endDate || "TBD"}</span>}
                 </div>

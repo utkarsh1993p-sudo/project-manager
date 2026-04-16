@@ -93,6 +93,7 @@ export interface Project {
   startDate: string;
   endDate: string;
   owner: string;
+  projectLabel: string;
   team: User[];
   goals: string[];
   timeline: Milestone[];

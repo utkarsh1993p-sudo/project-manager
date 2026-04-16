@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { normalizeAtlassianDomain } from "@/lib/utils";
+import { normalizeAtlassianDomain, generateProjectLabel } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 
 async function getAtlassianAuth(type: "jira" | "confluence") {
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     name, description, status, startDate, endDate, owner, goals,
+    projectLabel,
     createJiraEpic, jiraProjectKey, jiraEpicName,
     createConfluencePage, confluenceSpaceKey, confluencePageTitle,
   } = body;
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
       owner: owner?.trim() ?? "",
       goals: goals ?? [],
       progress: 0,
+      project_label: (projectLabel?.trim().toUpperCase() || generateProjectLabel(name)).slice(0, 8),
     })
     .select()
     .single();

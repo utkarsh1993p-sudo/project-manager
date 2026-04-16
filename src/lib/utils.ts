@@ -35,6 +35,25 @@ export function normalizeAtlassianDomain(raw: string): string {
     .trim();
 }
 
+// Generates a short uppercase label from project name initials.
+// "Product Launch Q2" → "PLQ2", "Infrastructure Migration" → "IM"
+export function generateProjectLabel(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word) => {
+      const clean = word.replace(/[^a-zA-Z0-9]/g, "");
+      if (!clean) return "";
+      const letter = clean[0].toUpperCase();
+      const trailingDigits = clean.slice(1).replace(/[^0-9]/g, "");
+      return letter + trailingDigits;
+    })
+    .filter(Boolean)
+    .join("")
+    .slice(0, 8)
+    .toUpperCase();
+}
+
 export function getRiskColor(level: string): string {
   const map: Record<string, string> = {
     low: "bg-green-100 text-green-700",

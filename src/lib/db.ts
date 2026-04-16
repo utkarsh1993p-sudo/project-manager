@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Project } from "@/types";
+import { generateProjectLabel } from "@/lib/utils";
 
 // Fetch all projects with basic info
 export async function getProjects(): Promise<Project[]> {
@@ -62,6 +63,7 @@ async function hydrateProject(project: any, supabase: any): Promise<Project> {
     startDate: project.start_date ?? "",
     endDate: project.end_date ?? "",
     owner: project.owner ?? "",
+    projectLabel: project.project_label ?? generateProjectLabel(project.name),
     progress: (() => {
       const allTasks = tasks ?? [];
       if (allTasks.length === 0) return 0;
