@@ -3,10 +3,11 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { getProjects } from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
-import { Plus, Users, Clock, AlertTriangle, Target } from "lucide-react";
+import { Users, Clock, AlertTriangle, Target } from "lucide-react";
+import { NewProjectButton } from "@/components/projects/new-project-button";
 
 const STATUS_STYLES: Record<string, string> = {
   active: "bg-green-100 text-green-700",
@@ -17,6 +18,13 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default async function ProjectsPage() {
   const MOCK_PROJECTS = await getProjects();
+
+  const supabase = await createClient();
+  const { data: integrations } = await supabase
+    .from("integrations")
+    .select("type, domain, jira_project_key, confluence_space_key");
+  const jira = integrations?.find((i) => i.type === "jira");
+  const confluence = integrations?.find((i) => i.type === "confluence");
   return (
     <div className="flex h-full min-h-screen">
       <Sidebar />
@@ -40,10 +48,12 @@ export default async function ProjectsPage() {
                 )
               )}
             </div>
-            <Button size="sm" className="shrink-0 self-start sm:self-auto">
-              <Plus size={16} />
-              New Project
-            </Button>
+            <NewProjectButton
+              jiraConnected={!!jira}
+              jiraProjectKey={jira?.jira_project_key ?? ""}
+              confluenceConnected={!!confluence}
+              confluenceSpaceKey={confluence?.confluence_space_key ?? ""}
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-4">

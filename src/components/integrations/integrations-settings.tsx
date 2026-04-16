@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertCircle, ExternalLink, Trash2 } from "lucide-react";
+import { SharePointPanel } from "./sharepoint-panel";
 
 interface IntegrationConfig {
   id: string;
@@ -17,6 +18,7 @@ interface IntegrationConfig {
 interface Props {
   jira: IntegrationConfig | null;
   confluence: IntegrationConfig | null;
+  sharepoint: IntegrationConfig | null;
 }
 
 function IntegrationForm({
@@ -209,7 +211,7 @@ function IntegrationForm({
   );
 }
 
-export function IntegrationsSettings({ jira, confluence }: Props) {
+export function IntegrationsSettings({ jira, confluence, sharepoint }: Props) {
   const [key, setKey] = useState(0);
   const refresh = () => setKey((k) => k + 1);
 
@@ -271,6 +273,9 @@ export function IntegrationsSettings({ jira, confluence }: Props) {
           <IntegrationForm type="confluence" existing={confluence} onSaved={refresh} />
         </CardContent>
       </Card>
+
+      {/* SharePoint */}
+      <SharePointPanel existing={sharepoint as Parameters<typeof SharePointPanel>[0]["existing"]} onSaved={refresh} />
 
       {/* Help */}
       <Card>

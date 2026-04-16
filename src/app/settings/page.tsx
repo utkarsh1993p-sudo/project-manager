@@ -11,6 +11,7 @@ export default async function SettingsPage() {
 
   const jira = integrations?.find((i) => i.type === "jira") ?? null;
   const confluence = integrations?.find((i) => i.type === "confluence") ?? null;
+  const sharepoint = integrations?.find((i) => i.type === "sharepoint") ?? null;
 
   return (
     <div className="flex h-full min-h-screen">
@@ -18,7 +19,7 @@ export default async function SettingsPage() {
       <div className="flex-1 flex flex-col min-w-0">
         <Header title="Settings" subtitle="Manage integrations and preferences" />
         <main className="flex-1 overflow-y-auto p-6">
-          <IntegrationsSettings jira={jira} confluence={confluence} />
+          <IntegrationsSettings jira={jira} confluence={confluence} sharepoint={sharepoint} />
         </main>
       </div>
     </div>

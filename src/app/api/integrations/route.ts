@@ -24,9 +24,12 @@ export async function POST(req: NextRequest) {
     .eq("type", body.type)
     .single();
 
+  const isAtlassian = body.type === "jira" || body.type === "confluence";
+  const normalizedDomain = isAtlassian ? normalizeAtlassianDomain(body.domain) : (body.domain ?? "");
+
   if (existing) {
     const updatePayload: Record<string, unknown> = {
-      domain: normalizeAtlassianDomain(body.domain),
+      domain: normalizedDomain,
       email: body.email,
       jira_project_key: body.jira_project_key ?? null,
       confluence_space_key: body.confluence_space_key ?? null,
@@ -47,7 +50,7 @@ export async function POST(req: NextRequest) {
   } else {
     const { error } = await supabase.from("integrations").insert({
       type: body.type,
-      domain: normalizeAtlassianDomain(body.domain),
+      domain: normalizedDomain,
       email: body.email,
       api_token: body.api_token,
       jira_project_key: body.jira_project_key ?? null,
