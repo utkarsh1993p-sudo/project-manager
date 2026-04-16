@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     url = `${base}/space?limit=50&type=global`;
   } else if (resource === "pages") {
     const key = spaceKey ?? auth.spaceKey;
-    url = `${base}/content?spaceKey=${key}&type=page&limit=50&expand=version,body.storage`;
+    url = `${base}/content?spaceKey=${key}&type=page&limit=50&expand=version,body.storage,_links`;
   } else {
     return NextResponse.json({ error: "Unknown resource" }, { status: 400 });
   }
