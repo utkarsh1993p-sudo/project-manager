@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeAtlassianDomain } from "@/lib/utils";
 
-// POST /api/jira/sync?projectId=xxx — pull JIRA issues → upsert into tasks
+// POST /api/jira/sync — pull JIRA issues into a specific project, filtered by project_label
+// Body: { projectId: string, projectLabel?: string }
 export async function POST(req: NextRequest) {
-  const { projectId } = await req.json();
+  const { projectId, projectLabel } = await req.json();
   const supabase = await createClient();
 
   // Get JIRA credentials
@@ -18,12 +19,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JIRA not connected" }, { status: 400 });
   }
 
+  // Resolve projectLabel from DB if not provided
+  let label = projectLabel as string | undefined;
+  if (!label) {
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("project_label")
+      .eq("id", projectId)
+      .single();
+    label = proj?.project_label ?? undefined;
+  }
+
   const auth = Buffer.from(`${integration.email}:${integration.api_token}`).toString("base64");
   const headers = { Authorization: `Basic ${auth}`, Accept: "application/json" };
 
-  // Fetch JIRA issues
+  // Build JQL — if a project label exists, scope to only issues with that label
+  const labelFilter = label
+    ? ` AND labels="${label.toLowerCase()}"`
+    : "";
+  const jql = `project=${integration.jira_project_key}${labelFilter} ORDER BY updated DESC`;
+
+  // Fetch JIRA issues scoped to this project's label
   const res = await fetch(
-    `https://${normalizeAtlassianDomain(integration.domain)}.atlassian.net/rest/api/3/search/jql?jql=project=${integration.jira_project_key} ORDER BY updated DESC&maxResults=100&fields=summary,status,priority,assignee,duedate,labels,description`,
+    `https://${normalizeAtlassianDomain(integration.domain)}.atlassian.net/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary,status,priority,assignee,duedate,labels,description,issuetype`,
     { headers }
   );
 

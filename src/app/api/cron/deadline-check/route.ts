@@ -163,14 +163,16 @@ async function sendEmail(params: {
 async function syncJiraForAllProjects(baseUrl: string): Promise<void> {
   try {
     const supabase = await createClient();
-    const { data: projects } = await supabase.from("projects").select("id");
+    const { data: projects } = await supabase
+      .from("projects")
+      .select("id, project_label");
     if (!projects?.length) return;
     await Promise.allSettled(
       projects.map((p) =>
         fetch(`${baseUrl}/api/jira/sync`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId: p.id }),
+          body: JSON.stringify({ projectId: p.id, projectLabel: p.project_label }),
         })
       )
     );
