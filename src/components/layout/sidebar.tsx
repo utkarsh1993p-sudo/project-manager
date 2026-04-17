@@ -109,7 +109,7 @@ function Logo() {
             transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="font-bold text-gray-900 text-base leading-tight tracking-tight"
           >
-            Programme Management
+            PROGRAMME MANAGEMENT
           </motion.p>
           <motion.p
             initial={{ opacity: 0, x: -8 }}
@@ -117,7 +117,7 @@ function Logo() {
             transition={{ duration: 0.4, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
             className="text-xs text-gray-400 mt-0.5"
           >
-            Delivery Dashboard
+            DELIVERY DASHBOARD
           </motion.p>
         </div>
       </motion.div>
@@ -164,8 +164,8 @@ export function Sidebar() {
                   <span className="text-white font-bold text-xs">PMDM</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">Programme Management</p>
-                  <p className="text-xs text-gray-400">Delivery Dashboard</p>
+                  <p className="font-semibold text-gray-900 text-sm">PROGRAMME MANAGEMENT</p>
+                  <p className="text-xs text-gray-400">DELIVERY DASHBOARD</p>
                 </div>
               </div>
               <button onClick={() => setMobileOpen(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer transition-colors">

@@ -6,7 +6,7 @@ import { Bell, Search } from "lucide-react";
 import { useNotifications } from "@/contexts/notifications-context";
 import { NotificationPanel } from "./notification-panel";
 
-const CYCLE_WORDS = ["Projects", "Planning", "Risk management", "Execution", "METRICS ON DEMAND"];
+const CYCLE_WORDS = ["PROJECTS", "PLANNING", "RISK MANAGEMENT", "EXECUTION", "METRICS ON DEMAND"];
 const CYCLE_DELAY = 2000;
 
 interface HeaderProps {
@@ -42,7 +42,7 @@ export function Header({ title }: HeaderProps) {
           className="flex items-baseline gap-2 flex-wrap"
         >
           {/* Dashboard */}
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight tracking-tight">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight tracking-tight uppercase">
             {title}
           </h1>
 
@@ -51,7 +51,7 @@ export function Header({ title }: HeaderProps) {
 
           {/* "Think" — fixed accent word */}
           <span className="text-xl md:text-2xl font-bold text-blue-600 leading-tight tracking-tight">
-            Think
+            THINK
           </span>
 
           {/* Cycling word — vertical ticker */}
@@ -82,7 +82,7 @@ export function Header({ title }: HeaderProps) {
           transition={{ delay: 0.18, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="text-xs text-gray-400"
         >
-          Programme Management Delivery Dashboard · METRICS ON DEMAND
+          PROGRAMME MANAGEMENT DELIVERY DASHBOARD · METRICS ON DEMAND
         </motion.p>
       </div>
 
