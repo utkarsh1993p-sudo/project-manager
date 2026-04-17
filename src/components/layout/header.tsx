@@ -6,8 +6,8 @@ import { Bell, Search } from "lucide-react";
 import { useNotifications } from "@/contexts/notifications-context";
 import { NotificationPanel } from "./notification-panel";
 
-const CYCLE_WORDS = ["Insights", "Planning", "Projects", "Ready when you are"];
-const CYCLE_DELAY = 1800; // ms between each word
+const CYCLE_WORDS = ["Projects", "Planning", "Risk management", "Execution", "ProjectFlow"];
+const CYCLE_DELAY = 2000;
 
 interface HeaderProps {
   title: string;
@@ -18,49 +18,71 @@ export function Header({ title }: HeaderProps) {
   const [panelOpen, setPanelOpen] = useState(false);
   const { unreadCount } = useNotifications();
   const [wordIndex, setWordIndex] = useState(0);
-  const [cyclingDone, setCyclingDone] = useState(false);
 
+  // Infinite loop
   useEffect(() => {
-    if (cyclingDone) return;
-    if (wordIndex >= CYCLE_WORDS.length - 1) {
-      setCyclingDone(true);
-      return;
-    }
-    const id = setTimeout(() => setWordIndex((i) => i + 1), CYCLE_DELAY);
+    const id = setTimeout(
+      () => setWordIndex((i) => (i + 1) % CYCLE_WORDS.length),
+      CYCLE_DELAY
+    );
     return () => clearTimeout(id);
-  }, [wordIndex, cyclingDone]);
+  }, [wordIndex]);
 
   return (
     <header className="h-16 md:h-20 border-b border-gray-100 bg-white px-4 md:px-6 flex items-center justify-between shrink-0">
-      {/* Title block */}
-      <div className="pl-10 md:pl-0 flex flex-col justify-center gap-0.5">
-        <motion.h1
-          initial={{ opacity: 0, y: -12 }}
+
+      {/* ── Title row ── */}
+      <div className="pl-10 md:pl-0 flex flex-col justify-center gap-1">
+
+        {/* "Dashboard · Think [cycling]" on one line */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="text-xl md:text-2xl font-bold text-gray-900 leading-tight"
+          className="flex items-baseline gap-2 flex-wrap"
         >
-          {title}
-        </motion.h1>
+          {/* Dashboard */}
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight tracking-tight">
+            {title}
+          </h1>
 
-        {/* Cycling subtitle */}
-        <div className="h-5 overflow-hidden relative">
-          <AnimatePresence mode="popLayout">
-            <motion.p
-              key={wordIndex}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-              className="text-sm text-gray-400 absolute whitespace-nowrap"
-            >
-              {CYCLE_WORDS[wordIndex]}
-            </motion.p>
-          </AnimatePresence>
-        </div>
+          {/* Divider dot */}
+          <span className="text-gray-300 text-lg font-light select-none">·</span>
+
+          {/* "Think" — fixed accent word */}
+          <span className="text-xl md:text-2xl font-bold text-blue-600 leading-tight tracking-tight">
+            Think
+          </span>
+
+          {/* Cycling word — slides from bottom */}
+          <div className="h-7 md:h-8 overflow-hidden relative flex items-center min-w-[140px]">
+            <AnimatePresence mode="popLayout">
+              <motion.span
+                key={wordIndex}
+                initial={{ y: 28, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -28, opacity: 0 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute text-xl md:text-2xl font-bold text-gray-800 leading-tight tracking-tight whitespace-nowrap"
+              >
+                {CYCLE_WORDS[wordIndex]}
+              </motion.span>
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="text-xs text-gray-400"
+        >
+          Real time management · Ready when you are
+        </motion.p>
       </div>
 
-      {/* Right controls */}
+      {/* ── Right controls ── */}
       <div className="flex items-center gap-2">
         <motion.button
           initial={{ opacity: 0, scale: 0.85 }}
