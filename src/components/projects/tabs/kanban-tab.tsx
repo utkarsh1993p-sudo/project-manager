@@ -4,7 +4,16 @@ import type { Project, Task, TaskStatus } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { getStatusColor } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
-import { Plus, Calendar, Tag } from "lucide-react";
+import { Plus, Calendar, Tag, AlertCircle } from "lucide-react";
+
+function getDaysUntilDue(dueDate: string): number | null {
+  if (!dueDate) return null;
+  const due = new Date(dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
 
 const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
   { id: "todo", label: "To Do", color: "bg-gray-100" },
@@ -26,16 +35,52 @@ interface TaskCardProps {
 }
 
 function TaskCard({ task }: TaskCardProps) {
+  const daysUntilDue = task.dueDate ? getDaysUntilDue(task.dueDate) : null;
+  const isOverdue = daysUntilDue !== null && daysUntilDue < 0;
+  const isDueSoon = daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 14;
+  const isUrgentDue = daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 3;
+
+  const urgencyBorder = isOverdue
+    ? "border-l-red-600"
+    : isUrgentDue
+    ? "border-l-orange-500"
+    : isDueSoon
+    ? "border-l-amber-400"
+    : PRIORITY_COLORS[task.priority];
+
+  const urgencyBg = isOverdue
+    ? "bg-red-50"
+    : isUrgentDue
+    ? "bg-orange-50"
+    : isDueSoon
+    ? "bg-amber-50/40"
+    : "bg-white";
+
   return (
     <div
-      className={`bg-white rounded-lg border border-gray-200 p-3 shadow-sm border-l-4 ${
-        PRIORITY_COLORS[task.priority]
-      } cursor-pointer hover:shadow-md transition-shadow`}
+      className={`${urgencyBg} rounded-lg border border-gray-200 p-3 shadow-sm border-l-4 ${urgencyBorder} cursor-pointer hover:shadow-md transition-shadow`}
     >
+      {/* Due-soon alert strip */}
+      {(isOverdue || isDueSoon) && task.status !== "done" && (
+        <div className={`flex items-center gap-1.5 text-xs font-semibold mb-2 ${isOverdue ? "text-red-600" : isUrgentDue ? "text-orange-600" : "text-amber-600"}`}>
+          <AlertCircle size={11} />
+          {isOverdue
+            ? `Overdue by ${Math.abs(daysUntilDue!)} day${Math.abs(daysUntilDue!) !== 1 ? "s" : ""}`
+            : daysUntilDue === 0
+            ? "Due today"
+            : `Due in ${daysUntilDue} day${daysUntilDue !== 1 ? "s" : ""}`}
+          {task.jiraKey && <span className="ml-auto font-mono text-[10px] opacity-70">{task.jiraKey}</span>}
+        </div>
+      )}
+
       <p className="text-sm font-medium text-gray-900 mb-2">{task.title}</p>
 
+      {!isOverdue && !isDueSoon && task.jiraKey && (
+        <p className="text-[10px] font-mono text-gray-400 mb-1">{task.jiraKey}</p>
+      )}
+
       <div className="flex flex-wrap gap-1 mb-2">
-        {task.tags?.map((tag) => (
+        {task.tags?.filter(t => t !== "jira").map((tag) => (
           <span
             key={tag}
             className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded flex items-center gap-1"
@@ -58,7 +103,7 @@ function TaskCard({ task }: TaskCardProps) {
 
         <div className="flex items-center gap-2">
           {task.dueDate && (
-            <span className="text-xs text-gray-400 flex items-center gap-1">
+            <span className={`text-xs flex items-center gap-1 ${isOverdue ? "text-red-500 font-semibold" : isDueSoon ? "text-amber-600 font-medium" : "text-gray-400"}`}>
               <Calendar size={10} />
               {formatDate(task.dueDate)}
             </span>

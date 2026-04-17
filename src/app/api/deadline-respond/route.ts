@@ -2,10 +2,49 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { groq, GROQ_MODEL } from "@/lib/groq";
 import { verifyToken } from "@/lib/deadline-token";
+import { getAtlassianAuth } from "@/lib/atlassian";
+import { normalizeAtlassianDomain } from "@/lib/utils";
 
 // Environment: RESEND_API_KEY, NEXT_PUBLIC_BASE_URL, GROQ_API_KEY, DEADLINE_TOKEN_SECRET
 
 type Action = "confirm" | "extend" | "blocked";
+
+async function updateJiraDueDate(jiraKey: string, newDate: string): Promise<void> {
+  try {
+    const auth = await getAtlassianAuth("jira");
+    if (!auth) return;
+    await fetch(
+      `https://${normalizeAtlassianDomain(auth.data.domain)}.atlassian.net/rest/api/3/issue/${jiraKey}`,
+      { method: "PUT", headers: auth.headers, body: JSON.stringify({ fields: { duedate: newDate } }) }
+    );
+  } catch (err) {
+    console.error("[deadline-respond] JIRA duedate update error:", err);
+  }
+}
+
+async function transitionJiraToBlocked(jiraKey: string): Promise<void> {
+  try {
+    const auth = await getAtlassianAuth("jira");
+    if (!auth) return;
+    const domain = normalizeAtlassianDomain(auth.data.domain);
+    const transRes = await fetch(
+      `https://${domain}.atlassian.net/rest/api/3/issue/${jiraKey}/transitions`,
+      { headers: auth.headers }
+    );
+    const transData = await transRes.json() as { transitions?: Array<{ id: string; name: string }> };
+    const blocked = (transData.transitions ?? []).find((t) =>
+      ["blocked", "on hold", "impediment"].some((n) => t.name.toLowerCase().includes(n))
+    );
+    if (blocked) {
+      await fetch(
+        `https://${domain}.atlassian.net/rest/api/3/issue/${jiraKey}/transitions`,
+        { method: "POST", headers: auth.headers, body: JSON.stringify({ transition: { id: blocked.id } }) }
+      );
+    }
+  } catch (err) {
+    console.error("[deadline-respond] JIRA transition error:", err);
+  }
+}
 
 interface ExtendRequestBody {
   token: string;
@@ -253,13 +292,20 @@ export async function POST(req: NextRequest) {
 
   if (action === "blocked") {
     // Update task status to blocked
-    const { error: updateError } = await supabase
+    const { data: taskRow, error: updateError } = await supabase
       .from("tasks")
       .update({ status: "blocked" })
-      .eq("id", payload.taskId);
+      .eq("id", payload.taskId)
+      .select("jira_key")
+      .single();
 
     if (updateError) {
       console.error("[deadline-respond] Failed to update task status:", updateError);
+    }
+
+    // Push blocked status to JIRA
+    if (taskRow?.jira_key) {
+      await transitionJiraToBlocked(taskRow.jira_key);
     }
 
     await logResponse({
@@ -334,13 +380,20 @@ export async function POST(req: NextRequest) {
 
     if (decision.approved) {
       // Update task due date
-      const { error: updateError } = await supabase
+      const { data: updatedTask, error: updateError } = await supabase
         .from("tasks")
         .update({ due_date: proposedDate })
-        .eq("id", payload.taskId);
+        .eq("id", payload.taskId)
+        .select("jira_key")
+        .single();
 
       if (updateError) {
         console.error("[deadline-respond] Failed to update due date:", updateError);
+      }
+
+      // Push new due date to JIRA
+      if (updatedTask?.jira_key) {
+        await updateJiraDueDate(updatedTask.jira_key, proposedDate);
       }
 
       await logResponse({

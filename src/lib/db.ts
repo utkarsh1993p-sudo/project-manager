@@ -111,6 +111,7 @@ async function hydrateProject(project: any, supabase: any): Promise<Project> {
       assignee: t.assignee ?? "",
       dueDate: t.due_date ?? "",
       tags: t.tags ?? [],
+      jiraKey: t.jira_key ?? "",
     })),
     workspaceDocs: (workspaceDocs ?? []).map((d: any) => ({
       id: d.id,

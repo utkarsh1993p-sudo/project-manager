@@ -160,6 +160,25 @@ async function sendEmail(params: {
   }
 }
 
+async function syncJiraForAllProjects(baseUrl: string): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const { data: projects } = await supabase.from("projects").select("id");
+    if (!projects?.length) return;
+    await Promise.allSettled(
+      projects.map((p) =>
+        fetch(`${baseUrl}/api/jira/sync`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: p.id }),
+        })
+      )
+    );
+  } catch (err) {
+    console.error("[deadline-check] JIRA pre-sync error:", err);
+  }
+}
+
 export async function GET(req: NextRequest) {
   // Verify cron secret
   const authHeader = req.headers.get("authorization");
@@ -170,6 +189,9 @@ export async function GET(req: NextRequest) {
 
   const supabase = await createClient();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+
+  // Sync JIRA issues into tasks before checking deadlines
+  await syncJiraForAllProjects(baseUrl);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

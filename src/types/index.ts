@@ -42,6 +42,7 @@ export interface Task {
   assignee?: string;
   dueDate?: string;
   tags?: string[];
+  jiraKey?: string;
 }
 
 export interface Milestone {

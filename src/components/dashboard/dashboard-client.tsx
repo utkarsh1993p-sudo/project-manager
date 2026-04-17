@@ -16,8 +16,17 @@ import {
   Users, AlertTriangle, TrendingUp, Target,
   CheckCircle2, ArrowRight, Sparkles, ChevronRight,
   RefreshCw, CheckCircle, XCircle, Zap, HelpCircle,
-  Activity, Shield, BarChart3,
+  Activity, Shield, BarChart3, Clock,
 } from "lucide-react";
+
+function getDaysUntilDue(dueDate: string): number | null {
+  if (!dueDate) return null;
+  const due = new Date(dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -204,10 +213,17 @@ export function DashboardClient({
           const stalledCount = projects.filter((p) => p.status === "on-hold").length;
           const criticalRisks = projects.flatMap((p) => p.risks).filter((r) => r.level === "critical" && r.status === "open").length;
 
+          const dueSoonTasks = projects.flatMap((p) => p.tasks).filter((t) => {
+            if (t.status === "done" || t.status === "blocked" || !t.dueDate) return false;
+            const days = getDaysUntilDue(t.dueDate);
+            return days !== null && days <= 14;
+          }).length;
+
           const pills = [
             { icon: Activity,    label: "Portfolio health",  value: `${avgProgress}%`,                      color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-100" },
             { icon: TrendingUp,  label: "Active initiatives", value: `${activeCount} of ${projects.length}`, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
             { icon: CheckCircle2,label: "Tasks closed",       value: `${doneTasks} / ${totalTasks}`,          color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-100" },
+            { icon: Clock,       label: "Due in 14 days",    value: dueSoonTasks > 0 ? `${dueSoonTasks} task${dueSoonTasks !== 1 ? "s" : ""}` : "Clear", color: dueSoonTasks > 0 ? "text-amber-600" : "text-emerald-600", bg: dueSoonTasks > 0 ? "bg-amber-50" : "bg-emerald-50", border: dueSoonTasks > 0 ? "border-amber-100" : "border-emerald-100" },
             { icon: Shield,      label: "Critical risks",    value: criticalRisks > 0 ? `${criticalRisks} open` : "Clear", color: criticalRisks > 0 ? "text-rose-600" : "text-emerald-600", bg: criticalRisks > 0 ? "bg-rose-50" : "bg-emerald-50", border: criticalRisks > 0 ? "border-rose-100" : "border-emerald-100" },
             { icon: BarChart3,   label: "Stalled",           value: stalledCount > 0 ? `${stalledCount} on hold` : "None", color: stalledCount > 0 ? "text-amber-600" : "text-gray-400", bg: stalledCount > 0 ? "bg-amber-50" : "bg-gray-50", border: stalledCount > 0 ? "border-amber-100" : "border-gray-100" },
           ];
@@ -605,41 +621,65 @@ export function DashboardClient({
                   text={`Open "${project.name}" — view tasks, risks, milestones, workspace docs, and the full project detail panel.`}
                   enabled={contextMode}
                 >
-                  <button onClick={() => { setSelectedProject(project); addNotif({ type: "project", title: `Opened: ${project.name}`, description: `${project.status} · ${project.progress}% complete · ${project.tasks.filter(t => t.status !== "done").length} open tasks` }); }} className="w-full text-left group cursor-pointer">
-                    <div className="rounded-2xl bg-white border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.05)] p-5 h-full transition-colors duration-150">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0 pr-3">
-                          <h3 className="font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors duration-150">{project.name}</h3>
-                          <p className="text-sm text-gray-400 mt-0.5 line-clamp-1">{project.description}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Badge className={`border text-xs ${STATUS_STYLES[project.status]}`}>{project.status}</Badge>
-                          <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors duration-150" />
-                        </div>
-                      </div>
+                  {(() => {
+                    const dueSoon = project.tasks.filter((t) => {
+                      if (t.status === "done" || t.status === "blocked" || !t.dueDate) return false;
+                      const days = getDaysUntilDue(t.dueDate);
+                      return days !== null && days <= 14;
+                    });
+                    const overdue = dueSoon.filter((t) => {
+                      const days = getDaysUntilDue(t.dueDate!);
+                      return days !== null && days < 0;
+                    });
+                    const hasDueSoon = dueSoon.length > 0;
+                    return (
+                      <button onClick={() => { setSelectedProject(project); addNotif({ type: "project", title: `Opened: ${project.name}`, description: `${project.status} · ${project.progress}% complete · ${project.tasks.filter(t => t.status !== "done").length} open tasks` }); }} className="w-full text-left group cursor-pointer">
+                        <div className={`rounded-2xl bg-white border shadow-[0_2px_8px_rgba(0,0,0,0.05)] p-5 h-full transition-colors duration-150 ${overdue.length > 0 ? "border-red-200" : hasDueSoon ? "border-amber-200" : "border-gray-100"}`}>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 min-w-0 pr-3">
+                              <h3 className="font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors duration-150">{project.name}</h3>
+                              <p className="text-sm text-gray-400 mt-0.5 line-clamp-1">{project.description}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Badge className={`border text-xs ${STATUS_STYLES[project.status]}`}>{project.status}</Badge>
+                              <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors duration-150" />
+                            </div>
+                          </div>
 
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
-                          <span>Progress</span>
-                          <span className="font-semibold text-gray-600">{project.progress}%</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${project.progress}%` }}
-                            transition={{ delay: 0.5 + i * 0.1, duration: 0.9, ease: "easeOut" }}
-                          />
-                        </div>
-                      </div>
+                          {hasDueSoon && (
+                            <div className={`flex items-center gap-1.5 text-xs font-semibold mb-3 px-2.5 py-1.5 rounded-lg ${overdue.length > 0 ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"}`}>
+                              <Clock size={11} />
+                              {overdue.length > 0
+                                ? `${overdue.length} task${overdue.length !== 1 ? "s" : ""} overdue`
+                                : `${dueSoon.length} task${dueSoon.length !== 1 ? "s" : ""} due within 14 days`}
+                              <span className="ml-auto opacity-60 font-normal">AI alerts active</span>
+                            </div>
+                          )}
 
-                      <div className="flex items-center gap-4 text-xs text-gray-400">
-                        <span className="flex items-center gap-1"><Users size={11} />{project.team.length} members</span>
-                        <span className="flex items-center gap-1"><CheckCircle2 size={11} />{project.tasks.filter(t => t.status !== "done").length} open tasks</span>
-                        <span className="flex items-center gap-1"><AlertTriangle size={11} />{project.risks.filter(r => r.status === "open").length} risks</span>
-                      </div>
-                    </div>
-                  </button>
+                          <div className="mb-4">
+                            <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+                              <span>Progress</span>
+                              <span className="font-semibold text-gray-600">{project.progress}%</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <motion.div
+                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${project.progress}%` }}
+                                transition={{ delay: 0.5 + i * 0.1, duration: 0.9, ease: "easeOut" }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4 text-xs text-gray-400">
+                            <span className="flex items-center gap-1"><Users size={11} />{project.team.length} members</span>
+                            <span className="flex items-center gap-1"><CheckCircle2 size={11} />{project.tasks.filter(t => t.status !== "done").length} open tasks</span>
+                            <span className="flex items-center gap-1"><AlertTriangle size={11} />{project.risks.filter(r => r.status === "open").length} risks</span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })()}
                 </ContextTip>
               </motion.div>
             ))}
