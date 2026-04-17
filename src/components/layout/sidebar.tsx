@@ -24,7 +24,7 @@ const NAV_ITEMS = [
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="flex-1 px-3 py-4 space-y-1">
+    <nav className="flex-1 px-3 py-4 space-y-0.5">
       {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         const active =
@@ -33,29 +33,33 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           <motion.div
             key={item.href}
             whileHover={{ y: -2, scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 500, damping: 28 }}
           >
             <Link
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative",
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 relative",
                 active
-                  ? "bg-white/15 text-white shadow-[0_4px_20px_rgba(0,0,0,0.4)] border border-white/20"
-                  : "text-slate-400 hover:bg-white/8 hover:text-white border border-transparent"
+                  ? "text-blue-700"
+                  : "text-gray-500 hover:text-gray-900"
               )}
-              style={active ? { backdropFilter: "blur(8px)" } : {}}
             >
               {active && (
                 <motion.div
                   layoutId="nav-pill"
-                  className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-white/20"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  className="absolute inset-0 rounded-xl bg-blue-50 border border-blue-100 shadow-[0_4px_16px_rgba(37,99,235,0.12)]"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              {!active && (
+                <motion.div
+                  className="absolute inset-0 rounded-xl bg-gray-50 opacity-0 hover:opacity-100 transition-opacity duration-150"
                 />
               )}
               <Icon size={16} className="relative z-10 shrink-0" />
-              <span className="relative z-10">{item.label}</span>
+              <span className="relative z-10 flex-1">{item.label}</span>
             </Link>
           </motion.div>
         );
@@ -66,16 +70,16 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 function UserBlock() {
   return (
-    <div className="px-4 py-4 border-t border-white/10">
+    <div className="px-4 py-4 border-t border-gray-100">
       <div className="flex items-center gap-3 px-2">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center text-white text-xs font-semibold shrink-0 shadow-lg ring-2 ring-white/20">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-semibold shrink-0 shadow-sm">
           UP
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate">Utkarsh Pandey</p>
-          <p className="text-xs text-slate-400 truncate">Admin</p>
+          <p className="text-sm font-medium text-gray-900 truncate">Utkarsh Pandey</p>
+          <p className="text-xs text-gray-400 truncate">Admin</p>
         </div>
-        <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_2px_rgba(52,211,153,0.5)]" />
+        <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
       </div>
     </div>
   );
@@ -83,14 +87,14 @@ function UserBlock() {
 
 function Logo() {
   return (
-    <div className="px-6 py-5 border-b border-white/10">
+    <div className="px-6 py-5 border-b border-gray-100">
       <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-lg">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shrink-0 shadow-sm">
           <span className="text-white font-bold text-sm">PM</span>
         </div>
         <div>
-          <p className="font-semibold text-white text-sm leading-tight">ProjectFlow</p>
-          <p className="text-xs text-slate-400">AI-Powered</p>
+          <p className="font-semibold text-gray-900 text-sm leading-tight">ProjectFlow</p>
+          <p className="text-xs text-gray-400">AI-Powered</p>
         </div>
       </div>
     </div>
@@ -104,9 +108,9 @@ export function Sidebar() {
     <>
       <button
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-50 w-9 h-9 bg-slate-900 border border-white/20 rounded-lg flex items-center justify-center shadow-sm"
+        className="md:hidden fixed top-4 left-4 z-50 w-9 h-9 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm cursor-pointer"
       >
-        <Menu size={18} className="text-slate-300" />
+        <Menu size={18} className="text-gray-600" />
       </button>
 
       <AnimatePresence>
@@ -115,7 +119,7 @@ export function Sidebar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
             onClick={() => setMobileOpen(false)}
           />
         )}
@@ -124,27 +128,23 @@ export function Sidebar() {
       <AnimatePresence>
         {mobileOpen && (
           <motion.aside
-            initial={{ x: -280 }}
+            initial={{ x: -288 }}
             animate={{ x: 0 }}
-            exit={{ x: -280 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="md:hidden fixed top-0 left-0 h-full w-72 z-50 flex flex-col"
-            style={{
-              background: "linear-gradient(160deg, #0f1729 0%, #111827 50%, #0f1729 100%)",
-              borderRight: "1px solid rgba(255,255,255,0.08)",
-            }}
+            exit={{ x: -288 }}
+            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+            className="md:hidden fixed top-0 left-0 h-full w-72 bg-white shadow-xl z-50 flex flex-col"
           >
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-sm">
                   <span className="text-white font-bold text-sm">PM</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-white text-sm">ProjectFlow</p>
-                  <p className="text-xs text-slate-400">AI-Powered</p>
+                  <p className="font-semibold text-gray-900 text-sm">ProjectFlow</p>
+                  <p className="text-xs text-gray-400">AI-Powered</p>
                 </div>
               </div>
-              <button onClick={() => setMobileOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+              <button onClick={() => setMobileOpen(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -154,16 +154,7 @@ export function Sidebar() {
         )}
       </AnimatePresence>
 
-      {/* Desktop sidebar */}
-      <aside
-        className="hidden md:flex w-60 shrink-0 flex-col min-h-screen"
-        style={{
-          background: "linear-gradient(160deg, #0f1729 0%, #111827 60%, #0d1520 100%)",
-          borderRight: "1px solid rgba(255,255,255,0.08)",
-        }}
-      >
-        {/* Mirror sheen at top */}
-        <div className="absolute top-0 left-0 w-60 h-32 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+      <aside className="hidden md:flex w-60 shrink-0 border-r border-gray-100 bg-white flex-col min-h-screen">
         <Logo />
         <NavLinks />
         <UserBlock />
