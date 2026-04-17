@@ -100,7 +100,7 @@ function Logo() {
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
           className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shrink-0 shadow-md"
         >
-          <span className="text-white font-bold text-sm">PM</span>
+          <span className="text-white font-bold text-sm">PMDM</span>
         </motion.div>
         <div>
           <motion.p
@@ -109,7 +109,7 @@ function Logo() {
             transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="font-bold text-gray-900 text-base leading-tight tracking-tight"
           >
-            ProjectFlow
+            Programme Management
           </motion.p>
           <motion.p
             initial={{ opacity: 0, x: -8 }}
@@ -117,7 +117,7 @@ function Logo() {
             transition={{ duration: 0.4, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
             className="text-xs text-gray-400 mt-0.5"
           >
-            Real time management
+            Delivery Dashboard
           </motion.p>
         </div>
       </motion.div>
@@ -161,11 +161,11 @@ export function Sidebar() {
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-sm">
-                  <span className="text-white font-bold text-sm">PM</span>
+                  <span className="text-white font-bold text-xs">PMDM</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">ProjectFlow</p>
-                  <p className="text-xs text-gray-400">AI-Powered</p>
+                  <p className="font-semibold text-gray-900 text-sm">Programme Management</p>
+                  <p className="text-xs text-gray-400">Delivery Dashboard</p>
                 </div>
               </div>
               <button onClick={() => setMobileOpen(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer transition-colors">

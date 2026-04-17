@@ -6,7 +6,7 @@ import { Bell, Search } from "lucide-react";
 import { useNotifications } from "@/contexts/notifications-context";
 import { NotificationPanel } from "./notification-panel";
 
-const CYCLE_WORDS = ["Projects", "Planning", "Risk management", "Execution", "ProjectFlow"];
+const CYCLE_WORDS = ["Projects", "Planning", "Risk management", "Execution", "METRICS ON DEMAND"];
 const CYCLE_DELAY = 2000;
 
 interface HeaderProps {
@@ -82,7 +82,7 @@ export function Header({ title }: HeaderProps) {
           transition={{ delay: 0.18, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="text-xs text-gray-400"
         >
-          Real time management · Ready when you are
+          Programme Management Delivery Dashboard · METRICS ON DEMAND
         </motion.p>
       </div>
 
