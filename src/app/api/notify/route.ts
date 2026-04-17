@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "ProjectFlow <notifications@projectflow.app>",
+        from: "ProjectFlow <onboarding@resend.dev>",
         to: recipients,
         subject: `[ProjectFlow] Timeline updated: ${projectName}`,
         html,

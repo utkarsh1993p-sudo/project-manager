@@ -122,7 +122,7 @@ async function sendEmail(params: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "ProjectFlow <notifications@projectflow.app>",
+      from: "ProjectFlow <onboarding@resend.dev>",
       to: [params.to],
       subject: params.subject,
       html,
