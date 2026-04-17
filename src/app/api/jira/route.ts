@@ -42,9 +42,13 @@ export async function GET(req: NextRequest) {
     url = `${base}/project/search?maxResults=50`;
   } else if (resource === "issues") {
     const key = projectKey ?? auth.projectKey;
-    url = `${base}/search/jql?jql=project=${key} ORDER BY created DESC&maxResults=50&fields=summary,status,priority,assignee,duedate,labels,issuetype`;
+    url = `${base}/search/jql?jql=project=${key} ORDER BY created DESC&maxResults=100&fields=summary,status,priority,assignee,duedate,labels,issuetype`;
   } else if (resource === "statuses") {
     url = `${base}/project/${projectKey ?? auth.projectKey}/statuses`;
+  } else if (resource === "comments") {
+    const issueKey = req.nextUrl.searchParams.get("issueKey");
+    if (!issueKey) return NextResponse.json({ error: "issueKey required" }, { status: 400 });
+    url = `${base}/issue/${issueKey}/comment?maxResults=50&orderBy=created`;
   } else {
     return NextResponse.json({ error: "Unknown resource" }, { status: 400 });
   }

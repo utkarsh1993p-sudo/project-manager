@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Drawer } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   RefreshCw, ArrowLeft, User, Calendar, Tag,
-  AlertCircle, Plus, X, CheckCircle2,
+  AlertCircle, Plus, X, CheckCircle2, MessageSquare, ChevronDown,
 } from "lucide-react";
+
+interface JiraComment {
+  id: string;
+  author: { displayName: string; avatarUrls?: { "48x48": string } };
+  body: { content?: Array<{ content?: Array<{ text?: string }> }> };
+  created: string;
+}
 
 interface JiraIssue {
   id: string;
@@ -42,14 +49,26 @@ const PRIORITY_DOT: Record<string, string> = {
 const ISSUE_TYPES = ["Task", "Story", "Bug", "Epic", "Subtask"];
 const PRIORITIES = ["Highest", "High", "Medium", "Low", "Lowest"];
 
-function extractText(description: JiraIssue["fields"]["description"]): string {
-  if (!description) return "";
+function extractText(
+  doc: { content?: Array<{ content?: Array<{ text?: string }> }> } | undefined
+): string {
+  if (!doc) return "";
   return (
-    description.content
+    doc.content
       ?.flatMap((block) => block.content ?? [])
       .map((inline) => inline.text ?? "")
       .join(" ") ?? ""
   );
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("en-US", {
+      day: "numeric", month: "short", year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
 }
 
 interface CreateForm {
@@ -78,6 +97,14 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
   const [selected, setSelected] = useState<JiraIssue | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
+  // Comments state
+  const [comments, setComments] = useState<JiraComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [labelFilter, setLabelFilter] = useState<string>("all");
+
   // Create issue state
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<CreateForm>(DEFAULT_FORM);
@@ -88,6 +115,11 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
   useEffect(() => {
     if (open) loadIssues();
   }, [open]);
+
+  useEffect(() => {
+    if (selected) loadComments(selected.key);
+    else setComments([]);
+  }, [selected]);
 
   async function loadIssues() {
     setLoading(true);
@@ -108,6 +140,20 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
     }
   }
 
+  async function loadComments(issueKey: string) {
+    setCommentsLoading(true);
+    setComments([]);
+    try {
+      const res = await fetch(`/api/jira?resource=comments&issueKey=${issueKey}`);
+      if (res.ok) {
+        const data = await res.json();
+        setComments(data.comments ?? []);
+      }
+    } finally {
+      setCommentsLoading(false);
+    }
+  }
+
   async function updateStatus(issue: JiraIssue, newStatus: string) {
     setUpdatingStatus(true);
     await fetch(`/api/jira/sync?jiraKey=${issue.key}&status=${newStatus}`);
@@ -121,10 +167,7 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
   }
 
   async function createIssue() {
-    if (!form.summary.trim()) {
-      setCreateError("Summary is required.");
-      return;
-    }
+    if (!form.summary.trim()) { setCreateError("Summary is required."); return; }
     setCreateLoading(true);
     setCreateError(null);
     setCreateSuccess(null);
@@ -143,12 +186,7 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
       if (data.key) {
         setCreateSuccess(`Created ${data.key} successfully!`);
         setForm(DEFAULT_FORM);
-        // Reload issues after short delay so Jira indexes it
-        setTimeout(() => {
-          loadIssues();
-          setCreateSuccess(null);
-          setCreating(false);
-        }, 1500);
+        setTimeout(() => { loadIssues(); setCreateSuccess(null); setCreating(false); }, 1500);
       } else {
         const msg = data.errors
           ? Object.values(data.errors).join(", ")
@@ -166,6 +204,27 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  // Derived filter options from loaded issues
+  const allStatuses = useMemo(() => {
+    const seen = new Set<string>();
+    issues.forEach((i) => seen.add(i.fields.status.name));
+    return Array.from(seen).sort();
+  }, [issues]);
+
+  const allLabels = useMemo(() => {
+    const seen = new Set<string>();
+    issues.forEach((i) => i.fields.labels.forEach((l) => seen.add(l)));
+    return Array.from(seen).sort();
+  }, [issues]);
+
+  const filteredIssues = useMemo(() => {
+    return issues.filter((i) => {
+      if (statusFilter !== "all" && i.fields.status.name !== statusFilter) return false;
+      if (labelFilter !== "all" && !i.fields.labels.includes(labelFilter)) return false;
+      return true;
+    });
+  }, [issues, statusFilter, labelFilter]);
+
   const drawerTitle = selected
     ? `${selected.key} — ${selected.fields.summary}`
     : creating
@@ -176,12 +235,12 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
     ? selected.fields.status.name
     : creating
     ? "Add a new issue to your project"
-    : `${issues.length} issues`;
+    : `${filteredIssues.length} of ${issues.length} issues`;
 
   return (
     <Drawer
       open={open}
-      onClose={() => { onClose(); setSelected(null); setCreating(false); }}
+      onClose={() => { onClose(); setSelected(null); setCreating(false); setStatusFilter("all"); setLabelFilter("all"); }}
       title={drawerTitle}
       subtitle={drawerSubtitle}
       width="xl"
@@ -281,6 +340,46 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
                   ))}
                 </div>
               </div>
+
+              {/* ── Comments ── */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageSquare size={14} className="text-gray-400" />
+                  <p className="text-xs text-gray-400 font-medium">COMMENTS</p>
+                  {!commentsLoading && (
+                    <span className="text-xs text-gray-400">({comments.length})</span>
+                  )}
+                </div>
+
+                {commentsLoading ? (
+                  <div className="flex items-center gap-2 text-gray-400 text-sm py-4">
+                    <RefreshCw size={13} className="animate-spin" /> Loading comments...
+                  </div>
+                ) : comments.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic bg-gray-50 rounded-xl p-4">No comments yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="bg-gray-50 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                              <User size={11} className="text-indigo-600" />
+                            </div>
+                            <span className="text-xs font-medium text-gray-700">
+                              {comment.author.displayName}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-400">{formatDate(comment.created)}</span>
+                        </div>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {extractText(comment.body) || <span className="italic text-gray-400">Empty comment</span>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -294,7 +393,6 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
               <ArrowLeft size={14} /> Back to issues
             </button>
 
-            {/* Issue type */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-2">Issue Type</label>
               <div className="flex flex-wrap gap-2">
@@ -314,7 +412,6 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
               </div>
             </div>
 
-            {/* Summary */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
                 Summary <span className="text-red-500">*</span>
@@ -328,7 +425,6 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
               />
             </div>
 
-            {/* Description */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
               <textarea
@@ -340,7 +436,6 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
               />
             </div>
 
-            {/* Priority */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-2">Priority</label>
               <div className="flex flex-wrap gap-2">
@@ -391,8 +486,8 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
         ) : (
           /* ── Issues list ── */
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-gray-500">{issues.length} issues from your JIRA project</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-gray-500">{filteredIssues.length} of {issues.length} issues</p>
               <div className="flex items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={loadIssues} disabled={loading}>
                   <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
@@ -401,6 +496,50 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
                   <Plus size={14} /> Create Issue
                 </Button>
               </div>
+            </div>
+
+            {/* ── Filters ── */}
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              {/* Status filter */}
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="appearance-none pl-3 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="all">All Statuses</option>
+                  {allStatuses.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+
+              {/* Label filter */}
+              {allLabels.length > 0 && (
+                <div className="relative">
+                  <select
+                    value={labelFilter}
+                    onChange={(e) => setLabelFilter(e.target.value)}
+                    className="appearance-none pl-3 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="all">All Labels</option>
+                    {allLabels.map((l) => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              )}
+
+              {(statusFilter !== "all" || labelFilter !== "all") && (
+                <button
+                  onClick={() => { setStatusFilter("all"); setLabelFilter("all"); }}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                >
+                  <X size={11} /> Clear filters
+                </button>
+              )}
             </div>
 
             {error && (
@@ -417,7 +556,7 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
             )}
 
             <div className="space-y-2">
-              {issues.map((issue) => (
+              {filteredIssues.map((issue) => (
                 <button
                   key={issue.id}
                   onClick={() => setSelected(issue)}
@@ -439,6 +578,18 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
                         <Badge className={`text-xs ${STATUS_COLOR[issue.fields.status.statusCategory.colorName] ?? "bg-gray-100 text-gray-700"}`}>
                           {issue.fields.status.name}
                         </Badge>
+                        {issue.fields.labels.length > 0 && (
+                          <div className="flex gap-1">
+                            {issue.fields.labels.slice(0, 2).map((l) => (
+                              <span key={l} className="text-xs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">
+                                {l}
+                              </span>
+                            ))}
+                            {issue.fields.labels.length > 2 && (
+                              <span className="text-xs text-gray-400">+{issue.fields.labels.length - 2}</span>
+                            )}
+                          </div>
+                        )}
                         {issue.fields.assignee && (
                           <span className="text-xs text-gray-500">{issue.fields.assignee.displayName}</span>
                         )}
@@ -453,12 +604,16 @@ export function JiraDrawer({ open, onClose }: JiraDrawerProps) {
                 </button>
               ))}
 
-              {!loading && issues.length === 0 && !error && (
+              {!loading && filteredIssues.length === 0 && !error && (
                 <div className="text-center py-12">
-                  <p className="text-gray-400 text-sm mb-3">No issues found in this JIRA project.</p>
-                  <Button size="sm" onClick={() => setCreating(true)}>
-                    <Plus size={14} /> Create your first issue
-                  </Button>
+                  <p className="text-gray-400 text-sm mb-3">
+                    {issues.length > 0 ? "No issues match the current filters." : "No issues found in this JIRA project."}
+                  </p>
+                  {issues.length === 0 && (
+                    <Button size="sm" onClick={() => setCreating(true)}>
+                      <Plus size={14} /> Create your first issue
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
