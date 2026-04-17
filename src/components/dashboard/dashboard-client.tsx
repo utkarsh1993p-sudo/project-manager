@@ -16,6 +16,7 @@ import {
   Users, AlertTriangle, TrendingUp, Target,
   CheckCircle2, ArrowRight, Sparkles, ChevronRight,
   RefreshCw, CheckCircle, XCircle, Zap, HelpCircle,
+  Activity, Shield, BarChart3,
 } from "lucide-react";
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -192,6 +193,115 @@ export function DashboardClient({
       <AiDrawer open={aiOpen} onClose={() => setAiOpen(false)} projects={projects} />
 
       <main className="flex-1 overflow-y-auto bg-[#F8FAFC] p-4 md:p-8 space-y-6">
+
+        {/* ── Enterprise Insights banner ── */}
+        {(() => {
+          const totalTasks = projects.flatMap((p) => p.tasks).length;
+          const doneTasks = projects.flatMap((p) => p.tasks).filter((t) => t.status === "done").length;
+          const avgProgress = projects.length
+            ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length)
+            : 0;
+          const stalledCount = projects.filter((p) => p.status === "on-hold").length;
+          const criticalRisks = projects.flatMap((p) => p.risks).filter((r) => r.level === "critical" && r.status === "open").length;
+
+          const pills = [
+            { icon: Activity,    label: "Portfolio health",  value: `${avgProgress}%`,                      color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-100" },
+            { icon: TrendingUp,  label: "Active initiatives", value: `${activeCount} of ${projects.length}`, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
+            { icon: CheckCircle2,label: "Tasks closed",       value: `${doneTasks} / ${totalTasks}`,          color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-100" },
+            { icon: Shield,      label: "Critical risks",    value: criticalRisks > 0 ? `${criticalRisks} open` : "Clear", color: criticalRisks > 0 ? "text-rose-600" : "text-emerald-600", bg: criticalRisks > 0 ? "bg-rose-50" : "bg-emerald-50", border: criticalRisks > 0 ? "border-rose-100" : "border-emerald-100" },
+            { icon: BarChart3,   label: "Stalled",           value: stalledCount > 0 ? `${stalledCount} on hold` : "None", color: stalledCount > 0 ? "text-amber-600" : "text-gray-400", bg: stalledCount > 0 ? "bg-amber-50" : "bg-gray-50", border: stalledCount > 0 ? "border-amber-100" : "border-gray-100" },
+          ];
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="relative overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+            >
+              {/* Left accent bar */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 via-indigo-500 to-violet-500 rounded-l-2xl" />
+
+              <div className="pl-6 pr-5 py-5 flex flex-col md:flex-row md:items-center gap-5">
+                {/* Left: label + tagline */}
+                <div className="flex-1 min-w-0">
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex items-center gap-2 mb-1.5"
+                  >
+                    <span className="text-[10px] font-bold tracking-widest text-blue-600 uppercase bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                      Enterprise Insights
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)] animate-pulse" />
+                    <span className="text-[10px] text-gray-400">Live</span>
+                  </motion.div>
+                  <motion.p
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.18, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-base font-bold text-gray-900 leading-snug"
+                  >
+                    Your view across every inflight initiative
+                  </motion.p>
+                  <motion.p
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.24, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-xs text-gray-400 mt-0.5"
+                  >
+                    Track momentum, surface blockers, and drive decisions — across every function.
+                  </motion.p>
+                </div>
+
+                {/* Right: portfolio pills */}
+                <motion.div
+                  variants={stagger}
+                  initial="hidden"
+                  animate="show"
+                  className="flex flex-wrap gap-2"
+                >
+                  {pills.map((pill, i) => {
+                    const PillIcon = pill.icon;
+                    return (
+                      <motion.div
+                        key={pill.label}
+                        variants={fadeUp}
+                        custom={i}
+                        whileHover={{ y: -2, scale: 1.03 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${pill.bg} ${pill.border} cursor-default`}
+                      >
+                        <PillIcon size={13} className={pill.color} />
+                        <div>
+                          <p className="text-[10px] text-gray-400 leading-none mb-0.5">{pill.label}</p>
+                          <p className={`text-xs font-bold leading-none ${pill.color}`}>{pill.value}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              </div>
+
+              {/* Bottom progress bar — portfolio avg */}
+              <div className="mx-6 mb-4">
+                <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+                  <span>Portfolio completion</span>
+                  <span className="font-semibold text-gray-600">{avgProgress}%</span>
+                </div>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${avgProgress}%` }}
+                    transition={{ delay: 0.4, duration: 1, ease: "easeOut" }}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {/* ── Context mode toggle ── */}
         <div className="flex items-center justify-end">
