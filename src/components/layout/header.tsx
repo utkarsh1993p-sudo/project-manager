@@ -54,16 +54,20 @@ export function Header({ title }: HeaderProps) {
             Think
           </span>
 
-          {/* Cycling word — slides from bottom */}
-          <div className="h-7 md:h-8 overflow-hidden relative flex items-center min-w-[140px]">
-            <AnimatePresence mode="popLayout">
+          {/* Cycling word — vertical ticker */}
+          <div
+            className="overflow-hidden"
+            style={{ height: "1.75rem", minWidth: "180px", display: "flex", alignItems: "flex-start" }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
               <motion.span
                 key={wordIndex}
-                initial={{ y: 28, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -28, opacity: 0 }}
-                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute text-xl md:text-2xl font-bold text-gray-800 leading-tight tracking-tight whitespace-nowrap"
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: "0%", opacity: 1 }}
+                exit={{ y: "-100%", opacity: 0 }}
+                transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: "block", lineHeight: "1.75rem" }}
+                className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight whitespace-nowrap"
               >
                 {CYCLE_WORDS[wordIndex]}
               </motion.span>
