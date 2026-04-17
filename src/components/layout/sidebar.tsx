@@ -100,7 +100,7 @@ function Logo() {
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
           className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shrink-0 shadow-md"
         >
-          <span className="text-white font-bold text-sm">PMDM</span>
+          <span className="text-white font-bold text-xs tracking-tight">PMDM</span>
         </motion.div>
         <div>
           <motion.p
