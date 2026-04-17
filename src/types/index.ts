@@ -13,10 +13,12 @@ export interface User {
 export interface Stakeholder {
   id: string;
   name: string;
+  title?: string;
   role: string;
   email: string;
   influence: "high" | "medium" | "low";
   interest: "high" | "medium" | "low";
+  impact?: "high" | "medium" | "low";
 }
 
 export interface Risk {
