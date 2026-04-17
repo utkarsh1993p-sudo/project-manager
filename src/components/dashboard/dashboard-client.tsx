@@ -11,6 +11,7 @@ import { JiraDrawer } from "./jira-drawer";
 import { ConfluenceDrawer } from "./confluence-drawer";
 import { AiDrawer } from "./ai-drawer";
 import { ContextTip } from "./context-tip";
+import { useNotifications } from "@/contexts/notifications-context";
 import {
   Users, AlertTriangle, TrendingUp, Target,
   CheckCircle2, ArrowRight, Sparkles, ChevronRight,
@@ -56,6 +57,7 @@ export function DashboardClient({
   confluenceDomain,
 }: DashboardClientProps) {
   const router = useRouter();
+  const { add: addNotif } = useNotifications();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [jiraOpen, setJiraOpen] = useState(false);
   const [confluenceOpen, setConfluenceOpen] = useState(false);
@@ -84,14 +86,59 @@ export function DashboardClient({
       });
       const data = await res.json();
       setLastSyncedAt(new Date());
-      setSyncResults(data.results ?? null);
+      const results: Record<string, { ok: boolean; synced?: number; created?: number; updated?: number; pushed?: number; pulled?: number; failed?: number; error?: string }> = data.results ?? {};
+      setSyncResults(results);
       if (!silent) setShowSyncResults(true);
       router.refresh();
+
+      // Push notifications for each sync step
+      const jiraIn = results.jiraToSupabase;
+      const jiraOut = results.supabaseToJira;
+      const confIn = results.confluenceToSupabase;
+      const confOut = results.supabaseToConfluence;
+      const confOverviews = results.confluenceProjectOverviews;
+
+      if (jiraIn?.ok) {
+        const count = (jiraIn.synced ?? 0) + (jiraIn.created ?? 0) + (jiraIn.updated ?? 0);
+        if (count > 0) addNotif({ type: "jira", title: "JIRA issues synced", description: `${count} issue${count !== 1 ? "s" : ""} pulled from JIRA into your projects.`, href: "/" });
+      }
+      if (jiraIn && !jiraIn.ok) addNotif({ type: "jira", title: "JIRA sync failed", description: jiraIn.error ?? "Could not pull issues from JIRA.", href: "/settings" });
+
+      if (jiraOut?.ok) {
+        const count = (jiraOut.pushed ?? 0) + (jiraOut.created ?? 0);
+        if (count > 0) addNotif({ type: "jira", title: "Tasks pushed to JIRA", description: `${count} task${count !== 1 ? "s" : ""} sent from your projects to JIRA.` });
+      }
+
+      if (confIn?.ok) {
+        const count = (confIn.pulled ?? 0) + (confIn.synced ?? 0);
+        if (count > 0) addNotif({ type: "confluence", title: "Confluence pages synced", description: `${count} page${count !== 1 ? "s" : ""} pulled from Confluence.`, href: "/" });
+      }
+
+      if (confOut?.ok) {
+        const count = (confOut.pushed ?? 0) + (confOut.updated ?? 0);
+        if (count > 0) addNotif({ type: "confluence", title: "Pages pushed to Confluence", description: `${count} workspace doc${count !== 1 ? "s" : ""} updated in Confluence.` });
+      }
+
+      if (confOverviews?.ok) {
+        const count = (confOverviews.pushed ?? 0) + (confOverviews.updated ?? 0);
+        if (count > 0) addNotif({ type: "confluence", title: "Project overviews updated", description: `${count} project overview page${count !== 1 ? "s" : ""} synced to Confluence.` });
+      }
+
+      // Always add a summary sync notification
+      const anyFailed = Object.values(results).some((r) => !r.ok);
+      addNotif({
+        type: "sync",
+        title: anyFailed ? "Sync completed with errors" : "Sync completed",
+        description: anyFailed
+          ? "Some integrations had errors. Check Settings to resolve."
+          : "All integrations synced successfully.",
+        href: anyFailed ? "/settings" : undefined,
+      });
     } finally {
       syncingRef.current = false;
       setSyncing(false);
     }
-  }, [router]);
+  }, [router, addNotif]);
 
   useEffect(() => {
     const id = setInterval(() => runSync(true), SYNC_INTERVAL_MS);
@@ -299,7 +346,7 @@ export function DashboardClient({
               enabled={contextMode}
             >
               <button
-                onClick={() => jiraConnected && setJiraOpen(true)}
+                onClick={() => { if (jiraConnected) { setJiraOpen(true); addNotif({ type: "jira", title: "Opened JIRA board", description: `Viewing issues for ${jiraKey ?? "your project"}.` }); } }}
                 className={`w-full text-left rounded-2xl border p-5 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition-colors duration-150 ${
                   jiraConnected ? "border-gray-100 cursor-pointer" : "border-gray-100 opacity-60 cursor-default"
                 }`}
@@ -336,7 +383,7 @@ export function DashboardClient({
               enabled={contextMode}
             >
               <button
-                onClick={() => confluenceConnected && setConfluenceOpen(true)}
+                onClick={() => { if (confluenceConnected) { setConfluenceOpen(true); addNotif({ type: "confluence", title: "Opened Confluence", description: `Browsing pages for ${confluenceDomain ?? "your workspace"}.` }); } }}
                 className={`w-full text-left rounded-2xl border p-5 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition-colors duration-150 ${
                   confluenceConnected ? "border-gray-100 cursor-pointer" : "border-gray-100 opacity-60 cursor-default"
                 }`}
@@ -373,7 +420,7 @@ export function DashboardClient({
               enabled={contextMode}
             >
               <button
-                onClick={() => setAiOpen(true)}
+                onClick={() => { setAiOpen(true); addNotif({ type: "ai", title: "AI Assistant opened", description: "Ready to generate reports, summaries, and analysis." }); }}
                 className="w-full text-left rounded-2xl border border-purple-100 bg-gradient-to-br from-violet-50/60 via-white to-white p-5 shadow-[0_2px_8px_rgba(139,92,246,0.08)] cursor-pointer transition-colors duration-150"
               >
                 <div className="flex items-center gap-3 mb-3">
@@ -448,7 +495,7 @@ export function DashboardClient({
                   text={`Open "${project.name}" — view tasks, risks, milestones, workspace docs, and the full project detail panel.`}
                   enabled={contextMode}
                 >
-                  <button onClick={() => setSelectedProject(project)} className="w-full text-left group cursor-pointer">
+                  <button onClick={() => { setSelectedProject(project); addNotif({ type: "project", title: `Opened: ${project.name}`, description: `${project.status} · ${project.progress}% complete · ${project.tasks.filter(t => t.status !== "done").length} open tasks` }); }} className="w-full text-left group cursor-pointer">
                     <div className="rounded-2xl bg-white border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.05)] p-5 h-full transition-colors duration-150">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0 pr-3">
