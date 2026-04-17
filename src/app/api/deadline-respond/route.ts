@@ -167,47 +167,53 @@ async function evaluateExtensionRequest(params: {
       {
         role: "system",
         content:
-          "You are a rigorous project management AI. Evaluate extension requests objectively.",
+          "You are a pragmatic project management AI. Your default is to approve reasonable extension requests — your job is to keep work moving, not to block it. Be supportive of genuine need while pushing back only on clearly unreasonable requests.",
       },
       {
         role: "user",
-        content: `Evaluate this extension request:
+        content: `Evaluate this deadline extension request and decide whether to approve it.
 
 Task: "${params.taskTitle}"
 Current due date: ${params.currentDueDate}
 Proposed new date: ${params.proposedDate}
 Days extension requested: ${daysRequested}
-Stakeholder reason: "${params.reason}"
+Stakeholder justification: "${params.reason}"
 
 Project context:
 - Project end date: ${params.projectEndDate}
 - Project progress: ${params.progress}%
 - Open risks: ${params.openRisks}
-- Other tasks still open: ${params.openTaskCount}
+- Other open tasks: ${params.openTaskCount}
 
-Rules for approval:
-- Extension <= 14 days: approve if reason is specific (technical blocker, dependency, resource constraint)
-- Extension 15-30 days: approve only if reason is compelling and proposed date is before project end
-- Extension > 30 days or past project end date: reject unless critical blocker
-- Vague reasons ("need more time", "busy") → reject with pushback
+Approval guidelines (apply with good judgment — default toward approval):
+- APPROVE if the reason shows genuine understanding of the work (review needed, dependency waiting, data not ready, technical complexity, etc.)
+- APPROVE if the proposed date is before the project end date and the extension is reasonable given the context
+- APPROVE vague-but-plausible reasons with a note encouraging more detail next time
+- REJECT only if: proposed date is past project end date AND extension is > 30 days with no compelling reason, OR the reason is completely empty/nonsensical
+- If in doubt, APPROVE with a note to the stakeholder
 
-Respond with ONLY valid JSON (no markdown):
-{
-  "approved": boolean,
-  "confidence": "high"|"medium"|"low",
-  "reasoning": "1-2 sentence internal reasoning",
-  "emailBody": "2-3 paragraph email to send back to the stakeholder explaining the decision in professional tone. If approved, confirm the new date and next steps. If rejected, push back firmly with data-backed reasoning and ask for better justification or smaller extension."
-}`,
+Your response must be a single raw JSON object — no markdown, no code fences, no extra text:
+{"approved":boolean,"confidence":"high"|"medium"|"low","reasoning":"1-2 sentence internal reasoning","emailBody":"2-3 paragraph professional email to the stakeholder. If approved: confirm new date, acknowledge their reason warmly, note any risk if relevant. If rejected: explain specifically why and suggest a smaller extension or ask for more detail."}`,
       },
     ],
-    max_tokens: 800,
-    temperature: 0.3,
+    max_tokens: 900,
+    temperature: 0.4,
   });
 
-  const raw = completion.choices[0]?.message?.content ?? "{}";
+  const raw = (completion.choices[0]?.message?.content ?? "").trim();
+
+  // Strip markdown code fences if the model wrapped the JSON
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
+
+  // Extract the first {...} block as a safety net
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
 
   try {
-    const parsed = JSON.parse(raw) as AiExtensionDecision;
+    const parsed = JSON.parse(jsonStr) as AiExtensionDecision;
     return parsed;
   } catch {
     console.error("[deadline-respond] Failed to parse AI JSON:", raw);
