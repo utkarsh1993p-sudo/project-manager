@@ -88,15 +88,39 @@ function UserBlock() {
 function Logo() {
   return (
     <div className="px-6 py-5 border-b border-gray-100">
-      <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shrink-0 shadow-sm">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="flex items-center gap-3"
+      >
+        <motion.div
+          initial={{ scale: 0.7, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+          className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shrink-0 shadow-md"
+        >
           <span className="text-white font-bold text-sm">PM</span>
-        </div>
+        </motion.div>
         <div>
-          <p className="font-semibold text-gray-900 text-sm leading-tight">ProjectFlow</p>
-          <p className="text-xs text-gray-400">AI-Powered</p>
+          <motion.p
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="font-bold text-gray-900 text-base leading-tight tracking-tight"
+          >
+            ProjectFlow
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="text-xs text-gray-400 mt-0.5"
+          >
+            Real time management
+          </motion.p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

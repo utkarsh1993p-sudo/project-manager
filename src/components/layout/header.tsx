@@ -1,42 +1,88 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Search } from "lucide-react";
 import { useNotifications } from "@/contexts/notifications-context";
 import { NotificationPanel } from "./notification-panel";
+
+const CYCLE_WORDS = ["Insights", "Planning", "Projects", "Ready when you are"];
+const CYCLE_DELAY = 1800; // ms between each word
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
 }
 
-export function Header({ title, subtitle }: HeaderProps) {
+export function Header({ title }: HeaderProps) {
   const [panelOpen, setPanelOpen] = useState(false);
   const { unreadCount } = useNotifications();
+  const [wordIndex, setWordIndex] = useState(0);
+  const [cyclingDone, setCyclingDone] = useState(false);
+
+  useEffect(() => {
+    if (cyclingDone) return;
+    if (wordIndex >= CYCLE_WORDS.length - 1) {
+      setCyclingDone(true);
+      return;
+    }
+    const id = setTimeout(() => setWordIndex((i) => i + 1), CYCLE_DELAY);
+    return () => clearTimeout(id);
+  }, [wordIndex, cyclingDone]);
 
   return (
-    <header className="h-14 md:h-16 border-b border-gray-100 bg-white px-4 md:px-6 flex items-center justify-between shrink-0">
-      <div className="pl-10 md:pl-0">
-        <h1 className="text-base md:text-lg font-semibold text-gray-900 leading-tight">{title}</h1>
-        {subtitle && (
-          <p className="text-xs md:text-sm text-gray-400 truncate max-w-xs md:max-w-none">{subtitle}</p>
-        )}
+    <header className="h-16 md:h-20 border-b border-gray-100 bg-white px-4 md:px-6 flex items-center justify-between shrink-0">
+      {/* Title block */}
+      <div className="pl-10 md:pl-0 flex flex-col justify-center gap-0.5">
+        <motion.h1
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="text-xl md:text-2xl font-bold text-gray-900 leading-tight"
+        >
+          {title}
+        </motion.h1>
+
+        {/* Cycling subtitle */}
+        <div className="h-5 overflow-hidden relative">
+          <AnimatePresence mode="popLayout">
+            <motion.p
+              key={wordIndex}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+              className="text-sm text-gray-400 absolute whitespace-nowrap"
+            >
+              {CYCLE_WORDS[wordIndex]}
+            </motion.p>
+          </AnimatePresence>
+        </div>
       </div>
 
+      {/* Right controls */}
       <div className="flex items-center gap-2">
-        <button className="w-8 h-8 md:w-9 md:h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-all duration-150 cursor-pointer">
+        <motion.button
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-all duration-150 cursor-pointer"
+        >
           <Search size={15} />
-        </button>
+        </motion.button>
 
-        {/* Bell with panel */}
-        <div className="relative">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.28, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="relative"
+        >
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
             onClick={() => setPanelOpen((v) => !v)}
-            className={`w-8 h-8 md:w-9 md:h-9 rounded-lg border flex items-center justify-center transition-all duration-150 cursor-pointer relative ${
+            className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-all duration-150 cursor-pointer relative ${
               panelOpen
                 ? "bg-blue-50 border-blue-200 text-blue-600"
                 : "border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
@@ -60,7 +106,7 @@ export function Header({ title, subtitle }: HeaderProps) {
           </motion.button>
 
           <NotificationPanel open={panelOpen} onClose={() => setPanelOpen(false)} />
-        </div>
+        </motion.div>
       </div>
     </header>
   );
